@@ -15,7 +15,7 @@ data class Snippet(
     @Id
     val id: UUID,
     val name: String,
-    val code: String,
+    val code: String, // File - blob storage
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "language_id", nullable = false)
     val languageId: Language,

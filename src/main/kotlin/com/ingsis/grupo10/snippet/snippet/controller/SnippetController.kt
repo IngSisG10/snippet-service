@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RestController
 class SnippetController(
     private val snippetService: SnippetService,
 ) {
-    // file: MultipartFile -> Como hacemos esto? Tenemos que hacerlo?
+    // todo: file: Blob Storage
 
     @PostMapping("/create")
     fun createSnippet(

@@ -8,6 +8,9 @@ import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
 import java.util.UUID
 
+// Ejecuciones del codigo
+// ejecuciones del test
+
 @Entity
 @Table(name = "snippet_log")
 data class SnippetLog(
