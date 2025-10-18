@@ -7,24 +7,19 @@ import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.OneToMany
 import jakarta.persistence.Table
-import java.time.LocalDateTime
 import java.util.UUID
 
 @Entity
-@Table(name = "Snippet")
-data class Snippet(
+@Table(name = "Test")
+data class Test(
     @Id
     val id: UUID,
-    val name: String,
-    val code: String,
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "language_id", nullable = false)
-    val language: Language,
-    val description: String?,
-    val version: String,
-    val ownerId: UUID,
-    val createdAt: LocalDateTime,
-    val updatedAt: LocalDateTime,
-    @OneToMany(mappedBy = "snippet")
+    @JoinColumn(name = "snippet_id", nullable = false)
+    val snippet: Snippet,
+    val name: String,
+    val inputs: String,
+    val expectedOutputs: String,
+    @OneToMany(mappedBy = "test")
     val logs: Set<Log> = emptySet(),
 )

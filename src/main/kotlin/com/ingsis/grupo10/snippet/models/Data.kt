@@ -1,19 +1,21 @@
 package com.ingsis.grupo10.snippet.models
 
 import jakarta.persistence.Entity
+import jakarta.persistence.FetchType
 import jakarta.persistence.Id
+import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
 import java.util.UUID
 
 @Entity
-@Table(name = "snippet_log")
-data class SnippetLog(
+@Table(name = "Data")
+data class Data(
     @Id
     val id: UUID,
-    @ManyToOne
-    val snippet: Snippet,
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "log_id", nullable = false)
     val log: Log,
-    val createdAt: String,
+    val name: String,
+    val data: String,
 )
