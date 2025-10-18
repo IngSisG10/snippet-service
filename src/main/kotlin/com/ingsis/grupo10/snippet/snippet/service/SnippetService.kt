@@ -5,7 +5,7 @@ import com.ingsis.grupo10.snippet.snippet.dto.SnippetResponseDto
 import com.ingsis.grupo10.snippet.snippet.repository.LanguageRepository
 import com.ingsis.grupo10.snippet.snippet.repository.SnippetRepository
 import org.springframework.stereotype.Service
-import java.time.Instant
+import java.time.LocalDateTime
 import java.util.UUID
 
 @Service
@@ -24,10 +24,10 @@ class SnippetService(
                 .orElseThrow { IllegalArgumentException("Snippet not found") }
 
         return SnippetResponseDto(
-            id = snippet.id.toString(),
+            id = snippet.id,
             name = snippet.name,
             description = snippet.description,
-            language = snippet.languageId.name,
+            language = snippet.language.name,
             version = snippet.version,
             ownerId = snippet.ownerId,
             createdAt = snippet.createdAt,
@@ -37,10 +37,10 @@ class SnippetService(
     fun getAllSnippets(): List<SnippetResponseDto> =
         snippetRepository.findAll().map {
             SnippetResponseDto(
-                id = it.id.toString(),
+                id = it.id,
                 name = it.name,
                 description = it.description,
-                language = it.languageId.name,
+                language = it.language.name,
                 version = it.version,
                 ownerId = it.ownerId,
                 createdAt = it.createdAt,
@@ -50,7 +50,7 @@ class SnippetService(
     // todo
     fun createSnippet(request: SnippetCreateRequest): SnippetResponseDto {
         val language =
-            languageRepository.findByName(request.language.name)
+            languageRepository.findByName(request.languageName)
                 ?: throw IllegalArgumentException("Language not supported")
 
         // validationResult -> Se validaria aqui por parte del parser?
@@ -60,29 +60,28 @@ class SnippetService(
 
         // lleve a: tener este msj de error.
 
-        val now = Instant.now().toString()
+        val now = LocalDateTime.now()
 
         val snippet =
             Snippet(
-                id = UUID.randomUUID(), // Implementa una función para generar IDs únicos
+                id = UUID.randomUUID(),
                 name = request.name,
                 code = request.code,
-                languageId = language,
+                language = language,
                 description = request.description,
-                version = request.version, // Versión inicial
-                ownerId = "owner-id-placeholder", // Reemplaza con el ID real del propietario
+                version = request.version,
+                ownerId = UUID.randomUUID(), // todo: Get from Auth Service
                 createdAt = now,
                 updatedAt = now,
-                snippetLogs = emptySet(),
             )
 
         snippetRepository.save(snippet)
 
         return SnippetResponseDto(
-            id = snippet.id.toString(),
+            id = snippet.id,
             name = snippet.name,
             description = snippet.description,
-            language = snippet.languageId.name,
+            language = snippet.language.name,
             version = snippet.version,
             ownerId = snippet.ownerId,
             createdAt = snippet.createdAt,
@@ -106,10 +105,8 @@ class SnippetService(
                 .orElseThrow { IllegalArgumentException("Snippet not found") }
 
         val language =
-            request.language.let {
-                languageRepository.findByName(it.name)
-                    ?: throw IllegalArgumentException("Language not supported")
-            }
+            languageRepository.findByName(request.languageName)
+                ?: throw IllegalArgumentException("Language not supported")
 
         // todo: Conviene quiza crear uno nuevo directamente, en lugar de hacer un copy
         val updatedSnippet =
@@ -117,18 +114,18 @@ class SnippetService(
                 name = request.name,
                 description = request.description,
                 code = request.code,
-                languageId = language,
+                language = language,
                 version = request.version,
-                updatedAt = Instant.now().toString(),
+                updatedAt = LocalDateTime.now(),
             )
 
         snippetRepository.save(updatedSnippet)
 
         return SnippetResponseDto(
-            id = updatedSnippet.id.toString(),
+            id = updatedSnippet.id,
             name = updatedSnippet.name,
             description = updatedSnippet.description,
-            language = updatedSnippet.languageId.name,
+            language = updatedSnippet.language.name,
             version = updatedSnippet.version,
             ownerId = updatedSnippet.ownerId,
             createdAt = updatedSnippet.createdAt,
