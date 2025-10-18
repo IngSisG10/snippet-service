@@ -7,6 +7,7 @@ import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.OneToMany
 import jakarta.persistence.Table
+import java.time.LocalDateTime
 import java.util.UUID
 
 @Entity
@@ -15,15 +16,15 @@ data class Snippet(
     @Id
     val id: UUID,
     val name: String,
-    val code: String, // File - blob storage
+    val code: String,
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "language_id", nullable = false)
-    val languageId: Language,
-    val description: String,
+    val language: Language,
+    val description: String?,
     val version: String,
-    val ownerId: String,
-    val createdAt: String,
-    val updatedAt: String,
-    @OneToMany
-    val snippetLogs: Set<SnippetLog> = emptySet(),
+    val ownerId: UUID,
+    val createdAt: LocalDateTime,
+    val updatedAt: LocalDateTime,
+    @OneToMany(mappedBy = "snippet")
+    val logs: Set<Log> = emptySet(),
 )
