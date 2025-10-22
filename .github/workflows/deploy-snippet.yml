@@ -1,0 +1,13 @@
+name: Deploy Snippet
+permissions:
+  pages: write
+  id-token: write
+  contents: read
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  call_workflow:
+    uses: ./.github/workflows/deploy.yml@main
