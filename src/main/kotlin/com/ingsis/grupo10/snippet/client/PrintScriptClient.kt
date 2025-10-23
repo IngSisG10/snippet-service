@@ -8,6 +8,9 @@ import org.springframework.http.MediaType
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.BodyInserters
 import org.springframework.web.reactive.function.client.WebClient
+import kotlin.io.path.createTempFile
+import kotlin.io.path.deleteExisting
+import kotlin.io.path.writeText
 
 @Service
 class PrintScriptClient(
@@ -17,8 +20,8 @@ class PrintScriptClient(
         code: String,
         version: String,
     ): ValidationResult {
-        val tempFile = createTempFile("snippet", ".ps")
-        tempFile.writeText(code)
+        val tempFilePath = createTempFile(prefix = "snippet", suffix = ".ps")
+        tempFilePath.writeText(code)
 
         try {
             val response =
@@ -28,7 +31,7 @@ class PrintScriptClient(
                     .contentType(MediaType.MULTIPART_FORM_DATA)
                     .body(
                         BodyInserters
-                            .fromMultipartData("snippet", FileSystemResource(tempFile))
+                            .fromMultipartData("snippet", FileSystemResource(tempFilePath.toFile()))
                             .with("version", version)
                             .with("config", createDefaultLintConfig()), // JSON con reglas
                     ).retrieve()
@@ -50,7 +53,7 @@ class PrintScriptClient(
                 )
             }
         } finally {
-            tempFile.delete()
+            tempFilePath.deleteExisting()
         }
     }
 
