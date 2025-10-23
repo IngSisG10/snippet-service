@@ -73,8 +73,8 @@ tasks.named('test') {
 
 publishing {
 	publications {
-		mavenJava(MavenPublication) {
-			from components.java
+		create('mavenJava', MavenPublication) {
+			from(components.java)
 			groupId = project.group
 			artifactId = "${project.name}-service"
 			version = project.version
