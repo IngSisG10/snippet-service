@@ -1,8 +1,8 @@
-package com.ingsis.grupo10.snippet.test.controller
+package com.ingsis.grupo10.snippet.controller
 
-import com.ingsis.grupo10.snippet.test.dto.TestCreateRequest
-import com.ingsis.grupo10.snippet.test.dto.TestResponseDto
-import com.ingsis.grupo10.snippet.test.service.TestService
+import com.ingsis.grupo10.snippet.dto.TestCreateRequest
+import com.ingsis.grupo10.snippet.dto.TestResponseDto
+import com.ingsis.grupo10.snippet.service.TestService
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping

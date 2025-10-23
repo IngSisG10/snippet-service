@@ -1,8 +1,9 @@
-package com.ingsis.grupo10.snippet.snippet.controller
+package com.ingsis.grupo10.snippet.controller
 
-import com.ingsis.grupo10.snippet.snippet.dto.SnippetCreateRequest
-import com.ingsis.grupo10.snippet.snippet.dto.SnippetResponseDto
-import com.ingsis.grupo10.snippet.snippet.service.SnippetService
+import com.ingsis.grupo10.snippet.dto.SnippetCreateRequest
+import com.ingsis.grupo10.snippet.dto.SnippetDetailDto
+import com.ingsis.grupo10.snippet.dto.SnippetSummaryDto
+import com.ingsis.grupo10.snippet.service.SnippetService
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
@@ -22,12 +23,12 @@ class SnippetController(
     // todo: file: Blob Storage
 
     @GetMapping
-    fun getAllSnippets(): ResponseEntity<List<SnippetResponseDto>> = ResponseEntity.ok(snippetService.getAllSnippets())
+    fun getAllSnippets(): ResponseEntity<List<SnippetSummaryDto>> = ResponseEntity.ok(snippetService.getAllSnippets())
 
     @GetMapping("/{id}")
     fun getSnippetById(
         @PathVariable id: UUID,
-    ): ResponseEntity<SnippetResponseDto> {
+    ): ResponseEntity<SnippetDetailDto> {
         val snippet = snippetService.getSnippetById(id)
         return ResponseEntity.ok(snippet)
     }
@@ -35,15 +36,15 @@ class SnippetController(
     @PostMapping("/create")
     fun createSnippet(
         @RequestBody request: SnippetCreateRequest,
-    ): ResponseEntity<SnippetResponseDto> {
-        val created = snippetService.createSnippet(request)
+    ): ResponseEntity<SnippetDetailDto> {
+        val created = snippetService.createSnippet(request) // TODO: Agregar lógica para extraer userId de JWT
         return ResponseEntity.ok(created)
     }
 
     @DeleteMapping("/{id}")
     fun deleteSnippet(
         @PathVariable id: UUID,
-    ): ResponseEntity<SnippetResponseDto> {
+    ): ResponseEntity<SnippetDetailDto> {
         snippetService.deleteSnippetById(id)
         return ResponseEntity.ok().build()
     }
@@ -52,5 +53,5 @@ class SnippetController(
     fun updateSnippet(
         @PathVariable id: UUID,
         @RequestBody request: SnippetCreateRequest,
-    ): ResponseEntity<SnippetResponseDto> = ResponseEntity.ok(snippetService.updateSnippet(id, request))
+    ): ResponseEntity<SnippetDetailDto> = ResponseEntity.ok(snippetService.updateSnippet(id, request))
 }

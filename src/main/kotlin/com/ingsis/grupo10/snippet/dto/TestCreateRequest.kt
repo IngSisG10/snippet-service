@@ -1,4 +1,4 @@
-package com.ingsis.grupo10.snippet.test.dto
+package com.ingsis.grupo10.snippet.dto
 
 data class TestCreateRequest(
     val name: String,

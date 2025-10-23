@@ -1,4 +1,4 @@
-package com.ingsis.grupo10.snippet.snippet.dto
+package com.ingsis.grupo10.snippet.dto
 
 data class SnippetCreateRequest(
     val name: String,

@@ -1,10 +1,10 @@
-package com.ingsis.grupo10.snippet.test.service
+package com.ingsis.grupo10.snippet.service
 
+import com.ingsis.grupo10.snippet.dto.TestCreateRequest
+import com.ingsis.grupo10.snippet.dto.TestResponseDto
 import com.ingsis.grupo10.snippet.models.Test
-import com.ingsis.grupo10.snippet.snippet.repository.SnippetRepository
-import com.ingsis.grupo10.snippet.test.dto.TestCreateRequest
-import com.ingsis.grupo10.snippet.test.dto.TestResponseDto
-import com.ingsis.grupo10.snippet.test.repository.TestRepository
+import com.ingsis.grupo10.snippet.repository.SnippetRepository
+import com.ingsis.grupo10.snippet.repository.TestRepository
 import org.springframework.stereotype.Service
 import java.util.UUID
 

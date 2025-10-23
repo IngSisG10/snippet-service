@@ -1,4 +1,4 @@
-package com.ingsis.grupo10.snippet.snippet.repository
+package com.ingsis.grupo10.snippet.repository
 
 import com.ingsis.grupo10.snippet.models.Snippet
 import org.springframework.data.jpa.repository.JpaRepository
