@@ -17,17 +17,17 @@ import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.boot.test.mock.mockito.MockBean
+import org.springframework.test.context.bean.override.mockito.MockitoBean
 import java.time.LocalDateTime
 import java.util.Optional
 import java.util.UUID
 
 @SpringBootTest
 class TestServiceTest {
-    @MockBean
+    @MockitoBean
     private lateinit var testRepository: TestRepository
 
-    @MockBean
+    @MockitoBean
     private lateinit var snippetRepository: SnippetRepository
 
     private lateinit var testService: TestService

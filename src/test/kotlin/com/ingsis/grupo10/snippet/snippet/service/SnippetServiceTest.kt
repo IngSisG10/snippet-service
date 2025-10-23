@@ -1,6 +1,8 @@
 package com.ingsis.grupo10.snippet.snippet.service
 
+import com.ingsis.grupo10.snippet.client.PrintScriptClient
 import com.ingsis.grupo10.snippet.dto.SnippetCreateRequest
+import com.ingsis.grupo10.snippet.dto.validation.ValidationResult
 import com.ingsis.grupo10.snippet.models.Language
 import com.ingsis.grupo10.snippet.models.Snippet
 import com.ingsis.grupo10.snippet.repository.LanguageRepository
@@ -18,18 +20,21 @@ import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.boot.test.mock.mockito.MockBean
+import org.springframework.test.context.bean.override.mockito.MockitoBean
 import java.time.LocalDateTime
 import java.util.Optional
 import java.util.UUID
 
 @SpringBootTest
 class SnippetServiceTest {
-    @MockBean
+    @MockitoBean
     private lateinit var snippetRepository: SnippetRepository
 
-    @MockBean
+    @MockitoBean
     private lateinit var languageRepository: LanguageRepository
+
+    @MockitoBean
+    private lateinit var printScriptClient: PrintScriptClient
 
     private lateinit var snippetService: SnippetService
 
@@ -39,7 +44,7 @@ class SnippetServiceTest {
 
     @BeforeEach
     fun setUp() {
-        snippetService = SnippetService(snippetRepository, languageRepository)
+        snippetService = SnippetService(snippetRepository, languageRepository, printScriptClient)
 
         testLanguage =
             Language(
@@ -126,6 +131,7 @@ class SnippetServiceTest {
 
     @Test
     fun `should create snippet successfully`() {
+        `when`(printScriptClient.validateSnippet(testRequest.code, testRequest.version)).thenReturn(ValidationResult.Success)
         `when`(languageRepository.findByName(testRequest.languageName)).thenReturn(testLanguage)
         `when`(snippetRepository.save(any(Snippet::class.java))).thenAnswer { it.arguments[0] }
 
@@ -145,6 +151,7 @@ class SnippetServiceTest {
 
     @Test
     fun `should throw exception when creating snippet with unsupported language`() {
+        `when`(printScriptClient.validateSnippet(testRequest.code, testRequest.version)).thenReturn(ValidationResult.Success)
         `when`(languageRepository.findByName(testRequest.languageName)).thenReturn(null)
 
         val exception =
@@ -194,6 +201,7 @@ class SnippetServiceTest {
             )
 
         `when`(snippetRepository.findById(testSnippet.id)).thenReturn(Optional.of(testSnippet))
+        `when`(printScriptClient.validateSnippet(updateRequest.code, updateRequest.version)).thenReturn(ValidationResult.Success)
         `when`(languageRepository.findByName(updateRequest.languageName)).thenReturn(testLanguage)
         `when`(snippetRepository.save(any(Snippet::class.java))).thenAnswer { it.arguments[0] }
 
@@ -229,6 +237,7 @@ class SnippetServiceTest {
     @Test
     fun `should throw exception when updating snippet with unsupported language`() {
         `when`(snippetRepository.findById(testSnippet.id)).thenReturn(Optional.of(testSnippet))
+        `when`(printScriptClient.validateSnippet(testRequest.code, testRequest.version)).thenReturn(ValidationResult.Success)
         `when`(languageRepository.findByName(testRequest.languageName)).thenReturn(null)
 
         val exception =

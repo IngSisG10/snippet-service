@@ -60,4 +60,26 @@ class PrintScriptClient(
             "identifier_format": "camel case"
         }
         """.trimIndent()
+
+    private fun extractLineNumber(message: String): Int? {
+        // Parse line number from error message
+        // Expected format: "Error at line X, column Y: ..."
+        val linePattern = Regex("line (\\d+)")
+        return linePattern
+            .find(message)
+            ?.groupValues
+            ?.get(1)
+            ?.toIntOrNull()
+    }
+
+    private fun extractColumnNumber(message: String): Int? {
+        // Parse column number from error message
+        // Expected format: "Error at line X, column Y: ..."
+        val columnPattern = Regex("column (\\d+)")
+        return columnPattern
+            .find(message)
+            ?.groupValues
+            ?.get(1)
+            ?.toIntOrNull()
+    }
 }
