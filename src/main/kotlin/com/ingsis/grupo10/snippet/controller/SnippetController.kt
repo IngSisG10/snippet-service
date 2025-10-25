@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
 
@@ -23,7 +24,22 @@ class SnippetController(
     // todo: file: Blob Storage
 
     @GetMapping
-    fun getAllSnippets(): ResponseEntity<List<SnippetSummaryDto>> = ResponseEntity.ok(snippetService.getAllSnippets())
+    fun getAllSnippets(
+        @RequestParam(required = false) name: String?,
+        @RequestParam(required = false) language: String?,
+        @RequestParam(required = false) compliance: String?,
+        @RequestParam(required = false) sortBy: String?,
+        @RequestParam(required = false, defaultValue = "ASC") sortDirection: String?,
+    ): ResponseEntity<List<SnippetSummaryDto>> =
+        ResponseEntity.ok(
+            snippetService.getAllSnippets(
+                name = name,
+                language = language,
+                compliance = compliance,
+                sortBy = sortBy,
+                sortDirection = sortDirection,
+            ),
+        )
 
     @GetMapping("/{id}")
     fun getSnippetById(

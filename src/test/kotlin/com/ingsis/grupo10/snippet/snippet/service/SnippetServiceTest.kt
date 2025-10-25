@@ -2,6 +2,7 @@ package com.ingsis.grupo10.snippet.snippet.service
 
 import com.ingsis.grupo10.snippet.client.PrintScriptClient
 import com.ingsis.grupo10.snippet.dto.SnippetCreateRequest
+import com.ingsis.grupo10.snippet.dto.log.LintStatus
 import com.ingsis.grupo10.snippet.dto.validation.ValidationResult
 import com.ingsis.grupo10.snippet.models.Language
 import com.ingsis.grupo10.snippet.models.Snippet
@@ -111,7 +112,15 @@ class SnippetServiceTest {
     @Test
     fun `should get all snippets successfully`() {
         val snippets = listOf(testSnippet)
+        val lintStatus =
+            LintStatus(
+                snippetId = testSnippet.id,
+                status = "pending",
+                lastLintDate = null,
+                errors = emptyList(),
+            )
         `when`(snippetRepository.findAll()).thenReturn(snippets)
+        `when`(logService.getLatestLintStatus(testSnippet.id)).thenReturn(lintStatus)
 
         val result = snippetService.getAllSnippets()
 
@@ -119,7 +128,9 @@ class SnippetServiceTest {
         assertEquals(1, result.size)
         assertEquals(testSnippet.id, result[0].id)
         assertEquals(testSnippet.name, result[0].name)
+        assertEquals("pending", result[0].compliance)
         verify(snippetRepository, times(1)).findAll()
+        verify(logService, times(1)).getLatestLintStatus(testSnippet.id)
     }
 
     @Test
@@ -253,5 +264,216 @@ class SnippetServiceTest {
         verify(snippetRepository, times(1)).findById(testSnippet.id)
         verify(languageRepository, times(1)).findByName(testRequest.languageName)
         verify(snippetRepository, never()).save(any(Snippet::class.java))
+    }
+
+    @Test
+    fun `should filter snippets by name`() {
+        val snippet1 =
+            Snippet(
+                id = UUID.randomUUID(),
+                name = "Hello World",
+                code = "println(\"Hello\");",
+                language = testLanguage,
+                description = "Test",
+                version = "1.1",
+                ownerId = UUID.randomUUID(),
+                createdAt = LocalDateTime.now(),
+                updatedAt = LocalDateTime.now(),
+            )
+        val snippet2 =
+            Snippet(
+                id = UUID.randomUUID(),
+                name = "Goodbye World",
+                code = "println(\"Bye\");",
+                language = testLanguage,
+                description = "Test",
+                version = "1.1",
+                ownerId = UUID.randomUUID(),
+                createdAt = LocalDateTime.now(),
+                updatedAt = LocalDateTime.now(),
+            )
+
+        val snippets = listOf(snippet1, snippet2)
+        `when`(snippetRepository.findAll()).thenReturn(snippets)
+        `when`(logService.getLatestLintStatus(snippet1.id)).thenReturn(
+            LintStatus(
+                snippetId = snippet1.id,
+                status = "pending",
+                lastLintDate = null,
+                errors = emptyList(),
+            ),
+        )
+        `when`(logService.getLatestLintStatus(snippet2.id)).thenReturn(
+            LintStatus(
+                snippetId = snippet2.id,
+                status = "pending",
+                lastLintDate = null,
+                errors = emptyList(),
+            ),
+        )
+
+        val result = snippetService.getAllSnippets(name = "Hello")
+
+        assertEquals(1, result.size)
+        assertEquals("Hello World", result[0].name)
+    }
+
+    @Test
+    fun `should filter snippets by compliance status`() {
+        val snippet1 =
+            Snippet(
+                id = UUID.randomUUID(),
+                name = "Valid Snippet",
+                code = "println(\"Valid\");",
+                language = testLanguage,
+                description = "Test",
+                version = "1.1",
+                ownerId = UUID.randomUUID(),
+                createdAt = LocalDateTime.now(),
+                updatedAt = LocalDateTime.now(),
+            )
+        val snippet2 =
+            Snippet(
+                id = UUID.randomUUID(),
+                name = "Invalid Snippet",
+                code = "println(\"Invalid\");",
+                language = testLanguage,
+                description = "Test",
+                version = "1.1",
+                ownerId = UUID.randomUUID(),
+                createdAt = LocalDateTime.now(),
+                updatedAt = LocalDateTime.now(),
+            )
+
+        val snippets = listOf(snippet1, snippet2)
+        `when`(snippetRepository.findAll()).thenReturn(snippets)
+        `when`(logService.getLatestLintStatus(snippet1.id)).thenReturn(
+            LintStatus(
+                snippetId = snippet1.id,
+                status = "valid",
+                lastLintDate = LocalDateTime.now(),
+                errors = emptyList(),
+            ),
+        )
+        `when`(logService.getLatestLintStatus(snippet2.id)).thenReturn(
+            LintStatus(
+                snippetId = snippet2.id,
+                status = "invalid",
+                lastLintDate = LocalDateTime.now(),
+                errors = emptyList(),
+            ),
+        )
+
+        val result = snippetService.getAllSnippets(compliance = "valid")
+
+        assertEquals(1, result.size)
+        assertEquals("Valid Snippet", result[0].name)
+        assertEquals("valid", result[0].compliance)
+    }
+
+    @Test
+    fun `should sort snippets by name ascending`() {
+        val snippet1 =
+            Snippet(
+                id = UUID.randomUUID(),
+                name = "Zebra",
+                code = "println(\"Z\");",
+                language = testLanguage,
+                description = "Test",
+                version = "1.1",
+                ownerId = UUID.randomUUID(),
+                createdAt = LocalDateTime.now(),
+                updatedAt = LocalDateTime.now(),
+            )
+        val snippet2 =
+            Snippet(
+                id = UUID.randomUUID(),
+                name = "Apple",
+                code = "println(\"A\");",
+                language = testLanguage,
+                description = "Test",
+                version = "1.1",
+                ownerId = UUID.randomUUID(),
+                createdAt = LocalDateTime.now(),
+                updatedAt = LocalDateTime.now(),
+            )
+
+        val snippets = listOf(snippet1, snippet2)
+        `when`(snippetRepository.findAll()).thenReturn(snippets)
+        `when`(logService.getLatestLintStatus(snippet1.id)).thenReturn(
+            LintStatus(
+                snippetId = snippet1.id,
+                status = "pending",
+                lastLintDate = null,
+                errors = emptyList(),
+            ),
+        )
+        `when`(logService.getLatestLintStatus(snippet2.id)).thenReturn(
+            LintStatus(
+                snippetId = snippet2.id,
+                status = "pending",
+                lastLintDate = null,
+                errors = emptyList(),
+            ),
+        )
+
+        val result = snippetService.getAllSnippets(sortBy = "name", sortDirection = "ASC")
+
+        assertEquals(2, result.size)
+        assertEquals("Apple", result[0].name)
+        assertEquals("Zebra", result[1].name)
+    }
+
+    @Test
+    fun `should sort snippets by name descending`() {
+        val snippet1 =
+            Snippet(
+                id = UUID.randomUUID(),
+                name = "Apple",
+                code = "println(\"A\");",
+                language = testLanguage,
+                description = "Test",
+                version = "1.1",
+                ownerId = UUID.randomUUID(),
+                createdAt = LocalDateTime.now(),
+                updatedAt = LocalDateTime.now(),
+            )
+        val snippet2 =
+            Snippet(
+                id = UUID.randomUUID(),
+                name = "Zebra",
+                code = "println(\"Z\");",
+                language = testLanguage,
+                description = "Test",
+                version = "1.1",
+                ownerId = UUID.randomUUID(),
+                createdAt = LocalDateTime.now(),
+                updatedAt = LocalDateTime.now(),
+            )
+
+        val snippets = listOf(snippet1, snippet2)
+        `when`(snippetRepository.findAll()).thenReturn(snippets)
+        `when`(logService.getLatestLintStatus(snippet1.id)).thenReturn(
+            LintStatus(
+                snippetId = snippet1.id,
+                status = "pending",
+                lastLintDate = null,
+                errors = emptyList(),
+            ),
+        )
+        `when`(logService.getLatestLintStatus(snippet2.id)).thenReturn(
+            LintStatus(
+                snippetId = snippet2.id,
+                status = "pending",
+                lastLintDate = null,
+                errors = emptyList(),
+            ),
+        )
+
+        val result = snippetService.getAllSnippets(sortBy = "name", sortDirection = "DESC")
+
+        assertEquals(2, result.size)
+        assertEquals("Zebra", result[0].name)
+        assertEquals("Apple", result[1].name)
     }
 }

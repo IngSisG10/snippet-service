@@ -9,4 +9,5 @@ data class SnippetSummaryDto(
     val language: String,
     val version: String,
     val createdAt: LocalDateTime,
+    val compliance: String?, // "pending", "valid", or "invalid"
 )

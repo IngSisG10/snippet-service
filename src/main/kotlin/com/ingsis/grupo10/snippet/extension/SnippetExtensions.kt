@@ -24,13 +24,14 @@ fun SnippetCreateRequest.toSnippet(
         updatedAt = LocalDateTime.now(),
     )
 
-fun Snippet.toSummaryDto(): SnippetSummaryDto =
+fun Snippet.toSummaryDto(compliance: String? = null): SnippetSummaryDto =
     SnippetSummaryDto(
         id = this.id,
         name = this.name,
         language = this.language.name,
         version = this.version,
         createdAt = this.createdAt,
+        compliance = compliance,
     )
 
 fun Snippet.toDetailDto(): SnippetDetailDto =

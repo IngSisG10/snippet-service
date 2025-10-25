@@ -8,7 +8,6 @@ import com.ingsis.grupo10.snippet.dto.validation.ValidationResult
 import com.ingsis.grupo10.snippet.exception.SnippetValidationException
 import com.ingsis.grupo10.snippet.extension.toDetailDto
 import com.ingsis.grupo10.snippet.extension.toSnippet
-import com.ingsis.grupo10.snippet.extension.toSummaryDto
 import com.ingsis.grupo10.snippet.repository.LanguageRepository
 import com.ingsis.grupo10.snippet.repository.SnippetRepository
 import org.springframework.stereotype.Service
@@ -35,10 +34,74 @@ class SnippetService(
         return snippet.toDetailDto()
     }
 
-    fun getAllSnippets(): List<SnippetSummaryDto> =
-        snippetRepository.findAll().map {
-            it.toSummaryDto()
+    fun getAllSnippets(
+        name: String? = null,
+        language: String? = null,
+        compliance: String? = null,
+        sortBy: String? = null,
+        sortDirection: String? = "ASC",
+    ): List<SnippetSummaryDto> {
+        val allSnippets = snippetRepository.findAll()
+
+        // Map to DTO with compliance status
+        var snippets =
+            allSnippets.map { snippet ->
+                val lintStatus = logService.getLatestLintStatus(snippet.id)
+                SnippetSummaryDto(
+                    id = snippet.id,
+                    name = snippet.name,
+                    language = snippet.language.name,
+                    version = snippet.version,
+                    createdAt = snippet.createdAt,
+                    compliance = lintStatus.status,
+                )
+            }
+
+        // Apply filters
+        name?.let { filterName ->
+            snippets = snippets.filter { it.name.contains(filterName, ignoreCase = true) }
         }
+
+        language?.let { filterLanguage ->
+            snippets = snippets.filter { it.language.equals(filterLanguage, ignoreCase = true) }
+        }
+
+        compliance?.let { filterCompliance ->
+            snippets = snippets.filter { it.compliance.equals(filterCompliance, ignoreCase = true) }
+        }
+
+        // Apply sorting
+        snippets =
+            when (sortBy?.lowercase()) {
+                "name" ->
+                    if (sortDirection?.uppercase() == "DESC") {
+                        snippets.sortedByDescending { it.name }
+                    } else {
+                        snippets.sortedBy { it.name }
+                    }
+                "language" ->
+                    if (sortDirection?.uppercase() == "DESC") {
+                        snippets.sortedByDescending { it.language }
+                    } else {
+                        snippets.sortedBy { it.language }
+                    }
+                "compliance" ->
+                    if (sortDirection?.uppercase() == "DESC") {
+                        snippets.sortedByDescending { it.compliance ?: "" }
+                    } else {
+                        snippets.sortedBy { it.compliance ?: "" }
+                    }
+                "createdat" ->
+                    if (sortDirection?.uppercase() == "DESC") {
+                        snippets.sortedByDescending { it.createdAt }
+                    } else {
+                        snippets.sortedBy { it.createdAt }
+                    }
+                else -> snippets // No sorting or default order
+            }
+
+        return snippets
+    }
 
     fun createSnippet(
         request: SnippetCreateRequest,
