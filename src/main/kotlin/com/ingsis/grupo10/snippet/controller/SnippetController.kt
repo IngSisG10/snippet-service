@@ -4,6 +4,7 @@ import com.ingsis.grupo10.snippet.dto.SnippetCreateRequest
 import com.ingsis.grupo10.snippet.dto.SnippetDetailDto
 import com.ingsis.grupo10.snippet.dto.SnippetSummaryDto
 import com.ingsis.grupo10.snippet.service.SnippetService
+import com.ingsis.grupo10.snippet.util.UserContext
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
@@ -53,14 +54,18 @@ class SnippetController(
     fun createSnippet(
         @RequestBody request: SnippetCreateRequest,
     ): ResponseEntity<SnippetDetailDto> {
-        val created = snippetService.createSnippet(request) // TODO: Agregar lógica para extraer userId de JWT
+        // TODO: When auth-service is implemented, extract userId from JWT token
+        // For now, use UserContext to get the current user ID
+        val created = snippetService.createSnippet(request)
         return ResponseEntity.ok(created)
     }
 
     @DeleteMapping("/{id}")
     fun deleteSnippet(
         @PathVariable id: UUID,
-    ): ResponseEntity<SnippetDetailDto> {
+    ): ResponseEntity<Void> {
+        // TODO: When auth-service is implemented, extract userId from JWT token
+        // For now, use UserContext to get the current user ID
         snippetService.deleteSnippetById(id)
         return ResponseEntity.ok().build()
     }
@@ -69,15 +74,20 @@ class SnippetController(
     fun updateSnippet(
         @PathVariable id: UUID,
         @RequestBody request: SnippetCreateRequest,
-    ): ResponseEntity<SnippetDetailDto> = ResponseEntity.ok(snippetService.updateSnippet(id, request))
+    ): ResponseEntity<SnippetDetailDto> {
+        // TODO: When auth-service is implemented, extract userId from JWT token
+        // For now, use UserContext to get the current user ID
+        val updated = snippetService.updateSnippet(id, request)
+        return ResponseEntity.ok(updated)
+    }
 
     @PostMapping("/{id}/lint")
     fun lintSnippet(
         @PathVariable id: UUID,
     ): ResponseEntity<SnippetDetailDto> {
-        // TODO: Extract userId from JWT token when auth is implemented
-        val userId = UUID.fromString("00000000-0000-0000-0000-000000000000")
-        val snippet = snippetService.lintSnippet(id, userId)
+        // TODO: When auth-service is implemented, extract userId from JWT token
+        // For now, use UserContext to get the current user ID
+        val snippet = snippetService.lintSnippet(id)
         return ResponseEntity.ok(snippet)
     }
 
@@ -85,9 +95,23 @@ class SnippetController(
     fun formatSnippet(
         @PathVariable id: UUID,
     ): ResponseEntity<SnippetDetailDto> {
-        // TODO: Extract userId from JWT token when auth is implemented
-        val userId = UUID.fromString("00000000-0000-0000-0000-000000000000")
-        val snippet = snippetService.formatSnippet(id, userId)
+        // TODO: When auth-service is implemented, extract userId from JWT token
+        // For now, use UserContext to get the current user ID
+        val snippet = snippetService.formatSnippet(id)
         return ResponseEntity.ok(snippet)
+    }
+
+    /**
+     * Gets all snippets owned by the current user.
+     *
+     * @return List of snippets owned by the current user
+     */
+    @GetMapping("/my-snippets")
+    fun getMySnippets(): ResponseEntity<List<SnippetSummaryDto>> {
+        // TODO: When auth-service is implemented, extract userId from JWT token
+        // For now, use UserContext to get the current user ID
+        val userId = UserContext.getCurrentUserIdAsString()
+        val snippets = snippetService.getSnippetsByUser(userId)
+        return ResponseEntity.ok(snippets)
     }
 }

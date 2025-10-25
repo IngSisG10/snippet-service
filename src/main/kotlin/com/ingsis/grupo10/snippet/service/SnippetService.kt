@@ -10,6 +10,8 @@ import com.ingsis.grupo10.snippet.extension.toDetailDto
 import com.ingsis.grupo10.snippet.extension.toSnippet
 import com.ingsis.grupo10.snippet.repository.LanguageRepository
 import com.ingsis.grupo10.snippet.repository.SnippetRepository
+import com.ingsis.grupo10.snippet.util.UserContext
+import com.ingsis.grupo10.snippet.util.toUuidOrThrow
 import org.springframework.stereotype.Service
 import java.time.LocalDateTime
 import java.util.UUID
@@ -107,7 +109,7 @@ class SnippetService(
 
     fun createSnippet(
         request: SnippetCreateRequest,
-        userId: String = "00000000-0000-0000-0000-000000000000",
+        userId: String? = null,
     ): SnippetDetailDto {
         val validationResult =
             printScriptClient.validateSnippet(
@@ -128,7 +130,15 @@ class SnippetService(
                     languageRepository.findByName(request.languageName)
                         ?: throw IllegalArgumentException("Language not supported")
 
-                val snippet = request.toSnippet(language, UUID.fromString(userId))
+                // Use provided userId or get current user from context
+                val ownerUuid =
+                    if (userId != null) {
+                        UserContext.toUuidOrThrow(userId, "Invalid userId format")
+                    } else {
+                        UserContext.getCurrentUserId()
+                    }
+
+                val snippet = request.toSnippet(language, ownerUuid)
 
                 val saved = snippetRepository.save(snippet)
 
@@ -139,21 +149,43 @@ class SnippetService(
         }
     }
 
-    fun deleteSnippetById(id: UUID) {
-        if (!snippetRepository.existsById(id)) {
-            throw IllegalArgumentException("Snippet not found")
+    fun deleteSnippetById(
+        id: UUID,
+        userId: String? = null,
+    ) {
+        val snippet =
+            snippetRepository
+                .findById(id)
+                .orElseThrow { IllegalArgumentException("Snippet not found") }
+
+        // Validate user ownership if userId is provided
+        if (userId != null) {
+            val userUuid = UserContext.toUuidOrThrow(userId, "Invalid userId format")
+            if (snippet.ownerId != userUuid) {
+                throw IllegalArgumentException("User does not have permission to delete this snippet")
+            }
         }
+
         snippetRepository.deleteById(id)
     }
 
     fun updateSnippet(
         id: UUID,
         request: SnippetCreateRequest,
+        userId: String? = null,
     ): SnippetDetailDto {
         val existingSnippet =
             snippetRepository
                 .findById(id)
                 .orElseThrow { IllegalArgumentException("Snippet not found") }
+
+        // Validate user ownership if userId is provided
+        if (userId != null) {
+            val userUuid = UserContext.toUuidOrThrow(userId, "Invalid userId format")
+            if (existingSnippet.ownerId != userUuid) {
+                throw IllegalArgumentException("User does not have permission to update this snippet")
+            }
+        }
 
         val validationResult =
             printScriptClient.validateSnippet(
@@ -182,6 +214,7 @@ class SnippetService(
                         language = language,
                         version = request.version,
                         updatedAt = LocalDateTime.now(),
+                        ownerId = existingSnippet.ownerId, // Keep existing ownerId for update
                     )
 
                 val saved = snippetRepository.save(updatedSnippet)
@@ -195,14 +228,17 @@ class SnippetService(
 
     fun lintSnippet(
         id: UUID,
-        userId: UUID = UUID.fromString("00000000-0000-0000-0000-000000000000"),
+        userId: UUID? = null,
     ): SnippetDetailDto {
         val snippet =
             snippetRepository
                 .findById(id)
                 .orElseThrow { IllegalArgumentException("Snippet not found") }
 
-        val lintConfig = lintConfigService.getConfigJson(userId)
+        // Use provided userId or get current user from context
+        val userUuid = userId ?: UserContext.getCurrentUserId()
+
+        val lintConfig = lintConfigService.getConfigJson(userUuid)
 
         val lintResult =
             printScriptClient.lintSnippet(
@@ -218,14 +254,17 @@ class SnippetService(
 
     fun formatSnippet(
         id: UUID,
-        userId: UUID = UUID.fromString("00000000-0000-0000-0000-000000000000"),
+        userId: UUID? = null,
     ): SnippetDetailDto {
         val snippet =
             snippetRepository
                 .findById(id)
                 .orElseThrow { IllegalArgumentException("Snippet not found") }
 
-        val formatConfig = formatConfigService.getConfigJson(userId)
+        // Use provided userId or get current user from context
+        val userUuid = userId ?: UserContext.getCurrentUserId()
+
+        val formatConfig = formatConfigService.getConfigJson(userUuid)
 
         val formatResult =
             printScriptClient.formatSnippet(
@@ -237,5 +276,28 @@ class SnippetService(
         logService.logFormatting(snippet, formatResult.formattedCode, formatConfig)
 
         return snippet.toDetailDto()
+    }
+
+    /**
+     * Gets all snippets owned by a specific user.
+     *
+     * @param userId The user ID to filter snippets by
+     * @return List of snippets owned by the user
+     */
+    fun getSnippetsByUser(userId: String): List<SnippetSummaryDto> {
+        val userUuid = UserContext.toUuidOrThrow(userId, "Invalid userId format")
+        val userSnippets = snippetRepository.findByOwnerId(userUuid)
+
+        return userSnippets.map { snippet ->
+            val lintStatus = logService.getLatestLintStatus(snippet.id)
+            SnippetSummaryDto(
+                id = snippet.id,
+                name = snippet.name,
+                language = snippet.language.name,
+                version = snippet.version,
+                createdAt = snippet.createdAt,
+                compliance = lintStatus.status,
+            )
+        }
     }
 }
