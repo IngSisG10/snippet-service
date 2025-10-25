@@ -20,6 +20,7 @@ class SnippetService(
     private val snippetRepository: SnippetRepository,
     private val languageRepository: LanguageRepository,
     private val printScriptClient: PrintScriptClient,
+    private val logService: LogService,
 ) {
     // En relacion al file -> solo consideralo como txt o un json
     // Para poder mandar esa informacion luego con la metadata que tenemos
@@ -65,6 +66,9 @@ class SnippetService(
                 val snippet = request.toSnippet(language, UUID.fromString(userId))
 
                 val saved = snippetRepository.save(snippet)
+
+                logService.logValidation(saved, emptyList())
+
                 return saved.toDetailDto()
             }
         }
@@ -115,8 +119,11 @@ class SnippetService(
                         updatedAt = LocalDateTime.now(),
                     )
 
-                snippetRepository.save(updatedSnippet)
-                return updatedSnippet.toDetailDto()
+                val saved = snippetRepository.save(updatedSnippet)
+
+                logService.logValidation(saved, emptyList())
+
+                return saved.toDetailDto()
             }
         }
     }
