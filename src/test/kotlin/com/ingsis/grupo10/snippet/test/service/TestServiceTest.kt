@@ -1,11 +1,12 @@
 package com.ingsis.grupo10.snippet.test.service
 
+import com.ingsis.grupo10.snippet.dto.TestCreateRequest
 import com.ingsis.grupo10.snippet.models.Language
 import com.ingsis.grupo10.snippet.models.Snippet
 import com.ingsis.grupo10.snippet.models.Test
-import com.ingsis.grupo10.snippet.snippet.repository.SnippetRepository
-import com.ingsis.grupo10.snippet.test.dto.TestCreateRequest
-import com.ingsis.grupo10.snippet.test.repository.TestRepository
+import com.ingsis.grupo10.snippet.repository.SnippetRepository
+import com.ingsis.grupo10.snippet.repository.TestRepository
+import com.ingsis.grupo10.snippet.service.TestService
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeEach
@@ -16,17 +17,17 @@ import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.boot.test.mock.mockito.MockBean
+import org.springframework.test.context.bean.override.mockito.MockitoBean
 import java.time.LocalDateTime
 import java.util.Optional
 import java.util.UUID
 
 @SpringBootTest
 class TestServiceTest {
-    @MockBean
+    @MockitoBean
     private lateinit var testRepository: TestRepository
 
-    @MockBean
+    @MockitoBean
     private lateinit var snippetRepository: SnippetRepository
 
     private lateinit var testService: TestService
