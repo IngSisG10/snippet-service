@@ -1,0 +1,18 @@
+package com.ingsis.grupo10.snippet.models
+
+import jakarta.persistence.Column
+import jakarta.persistence.Entity
+import jakarta.persistence.Id
+import jakarta.persistence.Table
+import java.util.UUID
+
+@Entity
+@Table(name = "format_config")
+data class FormatConfig(
+    @Id
+    val id: UUID = UUID.randomUUID(),
+    @Column(nullable = false)
+    val userId: UUID,
+    @Column(nullable = false, columnDefinition = "TEXT")
+    val config: String, // JSON string with formatting rules
+)

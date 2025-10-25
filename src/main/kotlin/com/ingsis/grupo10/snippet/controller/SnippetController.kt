@@ -70,4 +70,24 @@ class SnippetController(
         @PathVariable id: UUID,
         @RequestBody request: SnippetCreateRequest,
     ): ResponseEntity<SnippetDetailDto> = ResponseEntity.ok(snippetService.updateSnippet(id, request))
+
+    @PostMapping("/{id}/lint")
+    fun lintSnippet(
+        @PathVariable id: UUID,
+    ): ResponseEntity<SnippetDetailDto> {
+        // TODO: Extract userId from JWT token when auth is implemented
+        val userId = UUID.fromString("00000000-0000-0000-0000-000000000000")
+        val snippet = snippetService.lintSnippet(id, userId)
+        return ResponseEntity.ok(snippet)
+    }
+
+    @PostMapping("/{id}/format")
+    fun formatSnippet(
+        @PathVariable id: UUID,
+    ): ResponseEntity<SnippetDetailDto> {
+        // TODO: Extract userId from JWT token when auth is implemented
+        val userId = UUID.fromString("00000000-0000-0000-0000-000000000000")
+        val snippet = snippetService.formatSnippet(id, userId)
+        return ResponseEntity.ok(snippet)
+    }
 }

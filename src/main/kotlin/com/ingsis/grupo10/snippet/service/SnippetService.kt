@@ -20,6 +20,8 @@ class SnippetService(
     private val languageRepository: LanguageRepository,
     private val printScriptClient: PrintScriptClient,
     private val logService: LogService,
+    private val lintConfigService: LintConfigService,
+    private val formatConfigService: FormatConfigService,
 ) {
     // En relacion al file -> solo consideralo como txt o un json
     // Para poder mandar esa informacion luego con la metadata que tenemos
@@ -189,5 +191,51 @@ class SnippetService(
                 return saved.toDetailDto()
             }
         }
+    }
+
+    fun lintSnippet(
+        id: UUID,
+        userId: UUID = UUID.fromString("00000000-0000-0000-0000-000000000000"),
+    ): SnippetDetailDto {
+        val snippet =
+            snippetRepository
+                .findById(id)
+                .orElseThrow { IllegalArgumentException("Snippet not found") }
+
+        val lintConfig = lintConfigService.getConfigJson(userId)
+
+        val lintResult =
+            printScriptClient.lintSnippet(
+                code = snippet.code,
+                version = snippet.version,
+                lintConfig = lintConfig,
+            )
+
+        logService.logLinting(snippet, lintResult)
+
+        return snippet.toDetailDto()
+    }
+
+    fun formatSnippet(
+        id: UUID,
+        userId: UUID = UUID.fromString("00000000-0000-0000-0000-000000000000"),
+    ): SnippetDetailDto {
+        val snippet =
+            snippetRepository
+                .findById(id)
+                .orElseThrow { IllegalArgumentException("Snippet not found") }
+
+        val formatConfig = formatConfigService.getConfigJson(userId)
+
+        val formatResult =
+            printScriptClient.formatSnippet(
+                code = snippet.code,
+                version = snippet.version,
+                formatConfig = formatConfig,
+            )
+
+        logService.logFormatting(snippet, formatResult.formattedCode, formatConfig)
+
+        return snippet.toDetailDto()
     }
 }

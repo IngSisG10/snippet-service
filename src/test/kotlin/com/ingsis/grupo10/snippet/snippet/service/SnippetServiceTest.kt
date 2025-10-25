@@ -8,6 +8,8 @@ import com.ingsis.grupo10.snippet.models.Language
 import com.ingsis.grupo10.snippet.models.Snippet
 import com.ingsis.grupo10.snippet.repository.LanguageRepository
 import com.ingsis.grupo10.snippet.repository.SnippetRepository
+import com.ingsis.grupo10.snippet.service.FormatConfigService
+import com.ingsis.grupo10.snippet.service.LintConfigService
 import com.ingsis.grupo10.snippet.service.LogService
 import com.ingsis.grupo10.snippet.service.SnippetService
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -41,6 +43,12 @@ class SnippetServiceTest {
     @MockitoBean
     private lateinit var logService: LogService
 
+    @MockitoBean
+    private lateinit var lintConfigService: LintConfigService
+
+    @MockitoBean
+    private lateinit var formatConfigService: FormatConfigService
+
     private lateinit var snippetService: SnippetService
 
     private lateinit var testLanguage: Language
@@ -49,7 +57,8 @@ class SnippetServiceTest {
 
     @BeforeEach
     fun setUp() {
-        snippetService = SnippetService(snippetRepository, languageRepository, printScriptClient, logService)
+        snippetService =
+            SnippetService(snippetRepository, languageRepository, printScriptClient, logService, lintConfigService, formatConfigService)
 
         testLanguage =
             Language(
