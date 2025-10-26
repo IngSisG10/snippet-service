@@ -11,11 +11,12 @@ import java.util.UUID
 fun SnippetCreateRequest.toSnippet(
     language: Language,
     ownerId: UUID,
+    codeUrl: String,
 ): Snippet =
     Snippet(
         id = UUID.randomUUID(),
         name = this.name,
-        code = this.code,
+        codeUrl = codeUrl,
         language = language,
         description = this.description,
         version = this.version,
@@ -43,5 +44,5 @@ fun Snippet.toDetailDto(): SnippetDetailDto =
         version = this.version,
         ownerId = this.ownerId,
         createdAt = this.createdAt,
-        code = this.code,
+        codeUrl = this.codeUrl,
     )

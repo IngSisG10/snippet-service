@@ -11,5 +11,5 @@ data class SnippetDetailDto(
     val version: String,
     val ownerId: UUID,
     val createdAt: LocalDateTime,
-    val code: String,
+    val codeUrl: String,
 )

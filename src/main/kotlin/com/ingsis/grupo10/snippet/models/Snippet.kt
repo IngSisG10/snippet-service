@@ -16,8 +16,7 @@ data class Snippet(
     @Id
     val id: UUID,
     val name: String,
-    // val code_url: String, // url - del snippet en Blob Storage "https://mi_blob_storage.com/{key}" - getAsset
-    val code: String,
+    val codeUrl: String,
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "language_id", nullable = false)
     val language: Language,

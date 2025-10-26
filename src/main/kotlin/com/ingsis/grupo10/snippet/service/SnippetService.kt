@@ -1,5 +1,6 @@
 package com.ingsis.grupo10.snippet.service
 
+import com.ingsis.grupo10.snippet.client.AssetClient
 import com.ingsis.grupo10.snippet.client.PrintScriptClient
 import com.ingsis.grupo10.snippet.dto.SnippetCreateRequest
 import com.ingsis.grupo10.snippet.dto.SnippetDetailDto
@@ -10,6 +11,7 @@ import com.ingsis.grupo10.snippet.extension.toDetailDto
 import com.ingsis.grupo10.snippet.extension.toSnippet
 import com.ingsis.grupo10.snippet.repository.LanguageRepository
 import com.ingsis.grupo10.snippet.repository.SnippetRepository
+import com.ingsis.grupo10.snippet.util.AssetUtils.parseCodeUrl
 import com.ingsis.grupo10.snippet.util.UserContext
 import com.ingsis.grupo10.snippet.util.toUuidOrThrow
 import org.springframework.stereotype.Service
@@ -21,14 +23,11 @@ class SnippetService(
     private val snippetRepository: SnippetRepository,
     private val languageRepository: LanguageRepository,
     private val printScriptClient: PrintScriptClient,
+    private val assetClient: AssetClient,
     private val logService: LogService,
     private val lintConfigService: LintConfigService,
     private val formatConfigService: FormatConfigService,
 ) {
-    // En relacion al file -> solo consideralo como txt o un json
-    // Para poder mandar esa informacion luego con la metadata que tenemos
-    // El code es un file de ese estilo
-
     fun getSnippetById(id: UUID): SnippetDetailDto {
         val snippet =
             snippetRepository
@@ -138,7 +137,13 @@ class SnippetService(
                         UserContext.getCurrentUserId()
                     }
 
-                val snippet = request.toSnippet(language, ownerUuid)
+                // Create asset into the bucket
+                // fixme -> hardcodeado el container y la key
+                val codeUrl =
+                    assetClient.createAsset(container = "snippets", key = UUID.randomUUID().toString(), request.code)
+                        ?: throw RuntimeException("Failed to upload snippet asset")
+
+                val snippet = request.toSnippet(language, ownerUuid, codeUrl)
 
                 val saved = snippetRepository.save(snippet)
 
@@ -206,11 +211,21 @@ class SnippetService(
                     languageRepository.findByName(request.languageName)
                         ?: throw IllegalArgumentException("Language not supported")
 
+                val (container, key) = parseCodeUrl(existingSnippet.codeUrl)
+
+                // Update asset in the bucket
+                val updatedUrl =
+                    assetClient.createAsset(
+                        container = container,
+                        key = key,
+                        content = request.code, // newCode content
+                    ) ?: throw RuntimeException("Failed to update snippet asset")
+
                 val updatedSnippet =
                     existingSnippet.copy(
                         name = request.name,
                         description = request.description,
-                        code = request.code,
+                        codeUrl = updatedUrl,
                         language = language,
                         version = request.version,
                         updatedAt = LocalDateTime.now(),
@@ -240,9 +255,13 @@ class SnippetService(
 
         val lintConfig = lintConfigService.getConfigJson(userUuid)
 
+        val (container, key) = parseCodeUrl(snippet.codeUrl)
+
+        val code = assetClient.getAsset(container, key)
+
         val lintResult =
             printScriptClient.lintSnippet(
-                code = snippet.code,
+                code = code,
                 version = snippet.version,
                 lintConfig = lintConfig,
             )
@@ -266,9 +285,13 @@ class SnippetService(
 
         val formatConfig = formatConfigService.getConfigJson(userUuid)
 
+        val (container, key) = parseCodeUrl(snippet.codeUrl)
+
+        val code = assetClient.getAsset(container, key)
+
         val formatResult =
             printScriptClient.formatSnippet(
-                code = snippet.code,
+                code = code,
                 version = snippet.version,
                 formatConfig = formatConfig,
             )
