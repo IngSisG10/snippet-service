@@ -7,7 +7,7 @@ import org.springframework.web.reactive.function.client.WebClient
 
 @Configuration
 class AssetClientConfig {
-    @Value("\${services.asset.base-url}")
+    @Value("\${asset.service.url}")
     private lateinit var assetServiceUrl: String
 
     @Bean
