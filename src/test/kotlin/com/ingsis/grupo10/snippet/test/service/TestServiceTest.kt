@@ -12,25 +12,24 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.assertThrows
-import org.mockito.Mockito.any
-import org.mockito.Mockito.never
-import org.mockito.Mockito.times
-import org.mockito.Mockito.verify
+import org.mockito.ArgumentMatchers.any
+import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
+import org.mockito.kotlin.never
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.test.context.bean.override.mockito.MockitoBean
 import java.time.LocalDateTime
 import java.util.Optional
 import java.util.UUID
 
-@SpringBootTest
+// @SpringBootTest
 class TestServiceTest {
-    @MockitoBean
+  /*  @MockitoBean
     private lateinit var testRepository: TestRepository
 
     @MockitoBean
-    private lateinit var snippetRepository: SnippetRepository
+    private lateinit var snippetRepository: SnippetRepository*/
 
     private lateinit var testService: TestService
 
@@ -38,7 +37,9 @@ class TestServiceTest {
     private lateinit var testSnippet: Snippet
     private lateinit var testCase: Test
     private lateinit var testRequest: TestCreateRequest
-    lateinit var assetClient: AssetClient // fixme -> tiene sentido esto?
+    private val testRepository: TestRepository = mock()
+    private val snippetRepository: SnippetRepository = mock()
+    private val assetClient: AssetClient = mock() // fixme
 
     @BeforeEach
     fun setUp() {

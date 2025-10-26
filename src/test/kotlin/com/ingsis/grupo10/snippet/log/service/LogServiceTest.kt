@@ -24,22 +24,24 @@ import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import org.mockito.kotlin.whenever
-import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.test.context.bean.override.mockito.MockitoBean
 import java.time.LocalDateTime
 import java.util.UUID
 import org.junit.jupiter.api.Test as JUnitTest
 
-@SpringBootTest
+// @SpringBootTest
 class LogServiceTest {
-    @MockitoBean
-    private lateinit var logRepository: LogRepository
+//    @MockitoBean
+//    private lateinit var logRepository: LogRepository
+//
+//    @MockitoBean
+//    private lateinit var tagRepository: TagRepository
+//
+//    @MockitoBean
+//    private lateinit var dataRepository: DataRepository
 
-    @MockitoBean
-    private lateinit var tagRepository: TagRepository
-
-    @MockitoBean
-    private lateinit var dataRepository: DataRepository
+    private val logRepository: LogRepository = mock()
+    private val tagRepository: TagRepository = mock()
+    private val dataRepository: DataRepository = mock()
 
     private lateinit var logService: LogService
 
@@ -47,12 +49,11 @@ class LogServiceTest {
     private lateinit var testTest: Test
     private lateinit var validationTag: Tag
     private lateinit var lintTag: Tag
-    lateinit var assetClient: AssetClient
+    private val assetClient: AssetClient = mock()
 
     @BeforeEach
     fun setUp() {
         logService = LogService(logRepository, tagRepository, dataRepository)
-        assetClient = mock()
 
         val snippetId = UUID.randomUUID()
         val code = "let x: number = 5;"
