@@ -1,5 +1,6 @@
 package com.ingsis.grupo10.snippet.snippet.service
 
+import com.ingsis.grupo10.snippet.client.AssetClient
 import com.ingsis.grupo10.snippet.client.PrintScriptClient
 import com.ingsis.grupo10.snippet.dto.SnippetCreateRequest
 import com.ingsis.grupo10.snippet.dto.validation.ValidationError
@@ -13,6 +14,7 @@ import com.ingsis.grupo10.snippet.service.FormatConfigService
 import com.ingsis.grupo10.snippet.service.LintConfigService
 import com.ingsis.grupo10.snippet.service.LogService
 import com.ingsis.grupo10.snippet.service.SnippetService
+import com.ingsis.grupo10.snippet.util.AssetUtils.parseCodeUrl
 import com.ingsis.grupo10.snippet.util.UserContext
 import io.mockk.every
 import io.mockk.mockk
@@ -36,6 +38,7 @@ class SnippetServiceTest {
     private lateinit var lintConfigService: LintConfigService
     private lateinit var formatConfigService: FormatConfigService
     private lateinit var snippetService: SnippetService
+    private lateinit var assetClient: AssetClient
 
     private val testLanguage = Language(id = UUID.randomUUID(), name = "printscript")
     private val testUserId = UUID.fromString("00000000-0000-0000-0000-000000000000")
@@ -50,12 +53,14 @@ class SnippetServiceTest {
         logService = mockk(relaxed = true)
         lintConfigService = mockk()
         formatConfigService = mockk()
+        assetClient = mockk()
 
         snippetService =
             SnippetService(
                 snippetRepository,
                 languageRepository,
                 printScriptClient,
+                assetClient,
                 logService,
                 lintConfigService,
                 formatConfigService,
@@ -81,11 +86,17 @@ class SnippetServiceTest {
         val snippet = createTestSnippet(snippetId, testUserId)
         every { snippetRepository.findById(snippetId) } returns Optional.of(snippet)
 
+        val (snippetContainer, snippetKey) = parseCodeUrl(codeUrl = snippet.codeUrl)
+        val expectedCode = assetClient.getAsset(snippetContainer, snippetKey)
+
         val result = snippetService.getSnippetById(snippetId)
+        // codeUrl -> (container, key)
+        val (resultContainer, resultKey) = parseCodeUrl(codeUrl = result.codeUrl)
+        val resultCode = assetClient.getAsset(resultContainer, resultKey)
 
         assertEquals(snippet.id, result.id)
         assertEquals(snippet.name, result.name)
-        assertEquals(snippet.code, result.code)
+        assertEquals(expectedCode, resultCode)
         assertEquals(snippet.language.name, result.language)
     }
 
@@ -504,7 +515,7 @@ class SnippetServiceTest {
         Snippet(
             id = id,
             name = name,
-            code = "let x: number = 5;",
+            codeUrl = "let x: number = 5;", // fixme
             language = language,
             description = "Test description",
             version = "1.0",

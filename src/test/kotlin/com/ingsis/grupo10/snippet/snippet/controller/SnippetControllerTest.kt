@@ -63,29 +63,37 @@ class SnippetControllerTest {
 
     @Test
     fun `should get snippet by id`() {
+        val snippetId = testId
+        val container = "snippets"
+        val codeUrl = "$container/$snippetId"
+
         val snippet =
             SnippetDetailDto(
-                id = testId,
+                id = snippetId,
                 name = "Test Snippet",
                 description = "Test description",
-                code = "let x: number = 5;",
+                codeUrl = codeUrl,
                 language = "PrintScript",
                 version = "1.1",
                 ownerId = UUID.randomUUID(),
                 createdAt = LocalDateTime.now(),
             )
 
-        `when`(snippetService.getSnippetById(testId)).thenReturn(snippet)
+        `when`(snippetService.getSnippetById(snippetId)).thenReturn(snippet)
 
         mockMvc
-            .perform(get("/snippets/$testId"))
+            .perform(get("/snippets/$snippetId"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.name").value("Test Snippet"))
-            .andExpect(jsonPath("$.code").value("let x: number = 5;"))
+            .andExpect(jsonPath("$.codeUrl").value(codeUrl))
     }
 
     @Test
     fun `should create snippet`() {
+        val snippetId = testId
+        val container = "snippets"
+        val codeUrl = "$container/$snippetId"
+
         val request =
             SnippetCreateRequest(
                 name = "New Snippet",
@@ -97,18 +105,17 @@ class SnippetControllerTest {
 
         val response =
             SnippetDetailDto(
-                id = testId,
+                id = snippetId,
                 name = "New Snippet",
                 description = "Description",
-                code = "let x: number = 5;",
+                codeUrl = codeUrl,
                 language = "PrintScript",
                 version = "1.1",
                 ownerId = UUID.randomUUID(),
                 createdAt = LocalDateTime.now(),
             )
 
-        `when`(snippetService.createSnippet(anyOrNull(), anyOrNull()))
-            .thenReturn(response)
+        `when`(snippetService.createSnippet(anyOrNull(), anyOrNull())).thenReturn(response)
 
         mockMvc
             .perform(
@@ -117,6 +124,7 @@ class SnippetControllerTest {
                     .content(objectMapper.writeValueAsString(request)),
             ).andExpect(status().isOk)
             .andExpect(jsonPath("$.name").value("New Snippet"))
+            .andExpect(jsonPath("$.codeUrl").value(codeUrl))
     }
 
     @Test
@@ -135,7 +143,7 @@ class SnippetControllerTest {
                 id = testId,
                 name = "Updated Snippet",
                 description = "Updated description",
-                code = "let y: number = 10;",
+                codeUrl = "let y: number = 10;", // fixme
                 language = "PrintScript",
                 version = "1.1",
                 ownerId = UUID.randomUUID(),
@@ -168,7 +176,7 @@ class SnippetControllerTest {
                 id = testId,
                 name = "Test Snippet",
                 description = "Test",
-                code = "let x: number = 5;",
+                codeUrl = "let x: number = 5;", // fixme
                 language = "PrintScript",
                 version = "1.1",
                 ownerId = UUID.randomUUID(),
@@ -191,7 +199,7 @@ class SnippetControllerTest {
                 id = testId,
                 name = "Test Snippet",
                 description = "Test",
-                code = "let x: number = 5;",
+                codeUrl = "let x: number = 5;", // fixme
                 language = "PrintScript",
                 version = "1.1",
                 ownerId = UUID.randomUUID(),

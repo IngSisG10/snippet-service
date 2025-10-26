@@ -1,5 +1,6 @@
 package com.ingsis.grupo10.snippet.test.service
 
+import com.ingsis.grupo10.snippet.client.AssetClient
 import com.ingsis.grupo10.snippet.dto.TestCreateRequest
 import com.ingsis.grupo10.snippet.models.Language
 import com.ingsis.grupo10.snippet.models.Snippet
@@ -16,6 +17,7 @@ import org.mockito.Mockito.never
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
+import org.mockito.kotlin.whenever
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import java.time.LocalDateTime
@@ -36,10 +38,16 @@ class TestServiceTest {
     private lateinit var testSnippet: Snippet
     private lateinit var testCase: Test
     private lateinit var testRequest: TestCreateRequest
+    lateinit var assetClient: AssetClient // fixme -> tiene sentido esto?
 
     @BeforeEach
     fun setUp() {
         testService = TestService(testRepository, snippetRepository)
+
+        val snippetId = UUID.randomUUID()
+        val code = "let x: number = 5;\nprintln(x);"
+        val container = "snippets"
+        val codeUrl = "$container/$snippetId"
 
         testLanguage =
             Language(
@@ -51,7 +59,7 @@ class TestServiceTest {
             Snippet(
                 id = UUID.randomUUID(),
                 name = "Test Snippet",
-                code = "let x: number = 5;\nprintln(x);",
+                codeUrl = codeUrl,
                 language = testLanguage,
                 description = "Test description",
                 version = "1.1",
@@ -59,6 +67,12 @@ class TestServiceTest {
                 createdAt = LocalDateTime.now(),
                 updatedAt = LocalDateTime.now(),
             )
+
+        whenever(assetClient.createAsset("snippets", snippetId.toString(), "let x: number = 5;"))
+            .thenReturn(codeUrl)
+
+        whenever(assetClient.getAsset("snippets", testSnippet.id.toString()))
+            .thenReturn(code)
 
         testCase =
             Test(

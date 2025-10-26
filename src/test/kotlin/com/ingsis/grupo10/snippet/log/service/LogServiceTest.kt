@@ -1,5 +1,6 @@
 package com.ingsis.grupo10.snippet.log.service
 
+import com.ingsis.grupo10.snippet.client.AssetClient
 import com.ingsis.grupo10.snippet.dto.validation.LintErrorDTO
 import com.ingsis.grupo10.snippet.dto.validation.LintResultDTO
 import com.ingsis.grupo10.snippet.dto.validation.ValidationError
@@ -17,10 +18,12 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeEach
-import org.mockito.Mockito.any
+import org.mockito.ArgumentMatchers.any
+import org.mockito.Mockito.mock
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
+import org.mockito.kotlin.whenever
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import java.time.LocalDateTime
@@ -44,17 +47,25 @@ class LogServiceTest {
     private lateinit var testTest: Test
     private lateinit var validationTag: Tag
     private lateinit var lintTag: Tag
+    lateinit var assetClient: AssetClient
 
     @BeforeEach
     fun setUp() {
         logService = LogService(logRepository, tagRepository, dataRepository)
+        assetClient = mock()
+
+        val snippetId = UUID.randomUUID()
+        val code = "let x: number = 5;"
+        val container = "snippets"
+        val codeUrl = "$container/$snippetId"
 
         val language = Language(UUID.randomUUID(), "PrintScript")
+
         testSnippet =
             Snippet(
                 id = UUID.randomUUID(),
                 name = "Test Snippet",
-                code = "let x: number = 5;",
+                codeUrl = codeUrl,
                 language = language,
                 description = "Test",
                 version = "1.1",
@@ -62,6 +73,12 @@ class LogServiceTest {
                 createdAt = LocalDateTime.now(),
                 updatedAt = LocalDateTime.now(),
             )
+
+        whenever(assetClient.createAsset("snippets", snippetId.toString(), "let x: number = 5;"))
+            .thenReturn(codeUrl)
+
+        whenever(assetClient.getAsset("snippets", testSnippet.id.toString()))
+            .thenReturn(code)
 
         testTest =
             Test(
