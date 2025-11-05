@@ -2,3 +2,5 @@
 .gradle
 .idea/
 .env
+.env.local
+.env*.local
