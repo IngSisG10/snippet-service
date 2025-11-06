@@ -1,6 +1,7 @@
 package com.ingsis.grupo10.snippet.log.service
 
 import com.ingsis.grupo10.snippet.client.AssetClient
+import com.ingsis.grupo10.snippet.client.CreatedResult
 import com.ingsis.grupo10.snippet.dto.validation.LintErrorDTO
 import com.ingsis.grupo10.snippet.dto.validation.LintResultDTO
 import com.ingsis.grupo10.snippet.dto.validation.ValidationError
@@ -76,7 +77,7 @@ class LogServiceTest {
             )
 
         whenever(assetClient.createAsset("snippets", snippetId.toString(), "let x: number = 5;"))
-            .thenReturn(codeUrl)
+            .thenReturn(CreatedResult.Success(codeUrl))
 
         whenever(assetClient.getAsset("snippets", testSnippet.id.toString()))
             .thenReturn(code)

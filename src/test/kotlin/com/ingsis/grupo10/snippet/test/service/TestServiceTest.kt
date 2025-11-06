@@ -1,6 +1,7 @@
 package com.ingsis.grupo10.snippet.test.service
 
 import com.ingsis.grupo10.snippet.client.AssetClient
+import com.ingsis.grupo10.snippet.client.CreatedResult
 import com.ingsis.grupo10.snippet.dto.TestCreateRequest
 import com.ingsis.grupo10.snippet.models.Language
 import com.ingsis.grupo10.snippet.models.Snippet
@@ -70,7 +71,7 @@ class TestServiceTest {
             )
 
         whenever(assetClient.createAsset("snippets", snippetId.toString(), "let x: number = 5;"))
-            .thenReturn(codeUrl)
+            .thenReturn(CreatedResult.Success(codeUrl))
 
         whenever(assetClient.getAsset("snippets", testSnippet.id.toString()))
             .thenReturn(code)

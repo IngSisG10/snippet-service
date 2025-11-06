@@ -2,6 +2,7 @@ package com.ingsis.grupo10.snippet.snippet.controller
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.ingsis.grupo10.snippet.controller.SnippetController
+import com.ingsis.grupo10.snippet.dto.Created
 import com.ingsis.grupo10.snippet.dto.SnippetCreateRequest
 import com.ingsis.grupo10.snippet.dto.SnippetDetailDto
 import com.ingsis.grupo10.snippet.dto.SnippetSummaryDto
@@ -104,15 +105,8 @@ class SnippetControllerTest {
             )
 
         val response =
-            SnippetDetailDto(
-                id = snippetId,
-                name = "New Snippet",
-                description = "Description",
-                codeUrl = codeUrl,
-                language = "PrintScript",
-                version = "1.1",
-                ownerId = UUID.randomUUID(),
-                createdAt = LocalDateTime.now(),
+            Created(
+                id = snippetId.toString(),
             )
 
         `when`(snippetService.createSnippet(anyOrNull(), anyOrNull())).thenReturn(response)

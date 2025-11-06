@@ -1,6 +1,7 @@
 package com.ingsis.grupo10.snippet.snippet.service
 
 import com.ingsis.grupo10.snippet.client.AssetClient
+import com.ingsis.grupo10.snippet.client.CreatedResult
 import com.ingsis.grupo10.snippet.client.PrintScriptClient
 import com.ingsis.grupo10.snippet.dto.SnippetCreateRequest
 import com.ingsis.grupo10.snippet.dto.validation.ValidationError
@@ -200,12 +201,11 @@ class SnippetServiceTest {
         every { languageRepository.findByName("printscript") } returns testLanguage
         every { snippetRepository.save(any()) } returns createdSnippet
 
-        every { assetClient.createAsset("snippets", any(), any()) } returns "/snippets/fake-key"
+        every { assetClient.createAsset("snippets", any(), any()) } returns CreatedResult.Success("/snippets/fake-key")
 
         val result = snippetService.createSnippet(request, testUserIdString)
 
         assertEquals(createdSnippet.id, result.id)
-        assertEquals(createdSnippet.name, result.name)
         verify { snippetRepository.save(any()) }
         verify { logService.logValidation(any(), any()) }
     }
@@ -220,12 +220,11 @@ class SnippetServiceTest {
         every { languageRepository.findByName("printscript") } returns testLanguage
         every { snippetRepository.save(any()) } returns createdSnippet
 
-        every { assetClient.createAsset("snippets", any(), any()) } returns "/snippets/fake-key"
+        every { assetClient.createAsset("snippets", any(), any()) } returns CreatedResult.Success("/snippets/fake-key")
 
         val result = snippetService.createSnippet(request)
 
         assertEquals(createdSnippet.id, result.id)
-        assertEquals(createdSnippet.name, result.name)
         verify { snippetRepository.save(any()) }
     }
 
@@ -280,7 +279,7 @@ class SnippetServiceTest {
         every { languageRepository.findByName("printscript") } returns testLanguage
         every { snippetRepository.save(any()) } returns updatedSnippet
 
-        every { assetClient.createAsset("snippets", any(), any()) } returns "/snippets/fake-key"
+        every { assetClient.createAsset("snippets", any(), any()) } returns CreatedResult.Success("/snippets/fake-key")
 
         val result = snippetService.updateSnippet(snippetId, request, testUserIdString)
 
@@ -300,7 +299,7 @@ class SnippetServiceTest {
         every { languageRepository.findByName("printscript") } returns testLanguage
         every { snippetRepository.save(any()) } returns updatedSnippet
 
-        every { assetClient.createAsset("snippets", any(), any()) } returns "/snippets/fake-key"
+        every { assetClient.createAsset("snippets", any(), any()) } returns CreatedResult.Success("/snippets/fake-key")
 
         val result = snippetService.updateSnippet(snippetId, request)
 
