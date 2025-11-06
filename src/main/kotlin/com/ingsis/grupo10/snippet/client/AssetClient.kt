@@ -10,28 +10,6 @@ import org.springframework.web.reactive.function.client.WebClient
 class AssetClient(
     @Qualifier("assetWebClient") private val webClient: WebClient,
 ) {
-    fun createAsset(
-        container: String,
-        key: String,
-        content: String,
-    ): String? {
-        val response =
-            webClient
-                .post()
-                .uri("/v1/asset/$container/$key")
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .body(BodyInserters.fromValue(content))
-                .retrieve()
-                .toBodilessEntity()
-                .block()
-
-        return if (response?.statusCode?.is2xxSuccessful == true) {
-            "https://asset-service/v1/asset/$container/$key"
-        } else {
-            null
-        }
-    }
-
     fun getAsset(
         container: String,
         key: String,
@@ -43,6 +21,32 @@ class AssetClient(
             .retrieve()
             .bodyToMono(String::class.java)
             .block() ?: throw RuntimeException("Asset not found")
+
+    fun createAsset(
+        container: String,
+        key: String,
+        content: String,
+    ): CreatedResult {
+        val response =
+            try {
+                webClient
+                    .post()
+                    .uri("/v1/asset/$container/$key")
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .body(BodyInserters.fromValue(content))
+                    .retrieve()
+                    .toBodilessEntity()
+                    .block()
+            } catch (ex: Exception) {
+                return CreatedResult.Failure(null, ex.message)
+            }
+
+        return if (response?.statusCode?.is2xxSuccessful == true) {
+            CreatedResult.Success("https://asset-service/v1/asset/$container/$key")
+        } else {
+            CreatedResult.Failure(response?.statusCode?.value(), "Asset creation failed")
+        }
+    }
 
     fun deleteAsset(
         container: String,

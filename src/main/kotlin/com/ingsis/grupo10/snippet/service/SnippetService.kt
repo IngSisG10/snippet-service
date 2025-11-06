@@ -2,11 +2,13 @@ package com.ingsis.grupo10.snippet.service
 
 import com.ingsis.grupo10.snippet.client.AssetClient
 import com.ingsis.grupo10.snippet.client.PrintScriptClient
+import com.ingsis.grupo10.snippet.dto.Created
 import com.ingsis.grupo10.snippet.dto.SnippetCreateRequest
 import com.ingsis.grupo10.snippet.dto.SnippetDetailDto
 import com.ingsis.grupo10.snippet.dto.SnippetSummaryDto
 import com.ingsis.grupo10.snippet.dto.validation.ValidationResult
 import com.ingsis.grupo10.snippet.exception.SnippetValidationException
+import com.ingsis.grupo10.snippet.extension.created
 import com.ingsis.grupo10.snippet.extension.toDetailDto
 import com.ingsis.grupo10.snippet.extension.toSnippet
 import com.ingsis.grupo10.snippet.repository.LanguageRepository
@@ -109,7 +111,7 @@ class SnippetService(
     fun createSnippet(
         request: SnippetCreateRequest,
         userId: String? = null,
-    ): SnippetDetailDto {
+    ): Created {
         val validationResult =
             printScriptClient.validateSnippet(
                 code = request.code,
@@ -136,20 +138,19 @@ class SnippetService(
                     } else {
                         UserContext.getCurrentUserId()
                     }
-
                 // Create asset into the bucket
                 // fixme -> hardcodeado el container y la key
-                val codeUrl =
-                    assetClient.createAsset(container = "snippets", key = UUID.randomUUID().toString(), request.code)
-                        ?: throw RuntimeException("Failed to upload snippet asset")
+                // key -> a futuro vamos a tener que fixearlo para tener trazabilidad. Necesito conocer la key!
 
-                val snippet = request.toSnippet(language, ownerUuid, codeUrl)
+                val codeUrl = assetClient.createAsset(container = "snippets", key = UUID.randomUUID().toString(), request.code)
+
+                val snippet = request.toSnippet(language, ownerUuid, codeUrl.toString())
 
                 val saved = snippetRepository.save(snippet)
 
                 logService.logValidation(saved, emptyList())
 
-                return saved.toDetailDto()
+                return saved.created()
             }
         }
     }
@@ -225,7 +226,7 @@ class SnippetService(
                     existingSnippet.copy(
                         name = request.name,
                         description = request.description,
-                        codeUrl = updatedUrl,
+                        codeUrl = updatedUrl.toString(),
                         language = language,
                         version = request.version,
                         updatedAt = LocalDateTime.now(),

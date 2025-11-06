@@ -1,5 +1,6 @@
 package com.ingsis.grupo10.snippet.extension
 
+import com.ingsis.grupo10.snippet.dto.Created
 import com.ingsis.grupo10.snippet.dto.SnippetCreateRequest
 import com.ingsis.grupo10.snippet.dto.SnippetDetailDto
 import com.ingsis.grupo10.snippet.dto.SnippetSummaryDto
@@ -33,6 +34,11 @@ fun Snippet.toSummaryDto(compliance: String? = null): SnippetSummaryDto =
         version = this.version,
         createdAt = this.createdAt,
         compliance = compliance,
+    )
+
+fun Snippet.created(): Created =
+    Created(
+        id = this.id.toString(),
     )
 
 fun Snippet.toDetailDto(): SnippetDetailDto =
