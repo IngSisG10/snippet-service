@@ -12,11 +12,13 @@ services:
       DB_URL: jdbc:postgresql://db:5432/${DB_NAME:-snippet_db}
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
-      PRINTSCRIPT_SERVICE_URL: ${PRINTSCRIPT_SERVICE_URL:-http://localhost:8080}
+      PRINTSCRIPT_SERVICE_URL: http://printscript_service:8080
       ASSET_SERVICE_URL: http://asset_service:8080
     depends_on:
       - db
       - asset_service
+    networks:
+      - shared_network
 
   db:
     container_name: snippet_db
@@ -41,7 +43,8 @@ services:
       NEW_RELIC_AGENT_ENABLED: false
     depends_on:
       - azurite
-
+    networks:
+      - shared_network
   azurite:
     image: mcr.microsoft.com/azure-storage/azurite
     container_name: azurite
@@ -57,3 +60,8 @@ services:
 volumes:
   snippet-data:
   blob:
+
+
+networks:
+  shared_network:
+    external: true
