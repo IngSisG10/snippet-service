@@ -142,15 +142,18 @@ class SnippetService(
                 // Create asset into the bucket
                 val snippetId = UUID.randomUUID()
 
-                val codeUrl =
+                val assetResult =
                     assetClient.createAsset(
                         container = "snippets",
                         key = snippetId.toString(), // asociamos esta key con el ID del snippet
                         content = request.code,
                     )
 
+                // Store as "container/key" format
+                val codeUrl = "snippets/$snippetId"
+
                 // y creamos el snippet con ese ID
-                val snippet = request.toSnippet(language, ownerUuid, codeUrl.toString(), snippetId)
+                val snippet = request.toSnippet(language, ownerUuid, codeUrl, snippetId)
 
                 val saved = snippetRepository.save(snippet)
 
@@ -221,18 +224,18 @@ class SnippetService(
                 val (container, key) = parseCodeUrl(existingSnippet.codeUrl)
 
                 // Update asset in the bucket
-                val updatedUrl =
-                    assetClient.createAsset(
-                        container = container,
-                        key = key,
-                        content = request.code, // newCode content
-                    ) ?: throw RuntimeException("Failed to update snippet asset")
+                assetClient.createAsset(
+                    container = container,
+                    key = key,
+                    content = request.code, // newCode content
+                )
 
+                // Keep the same codeUrl format "container/key"
                 val updatedSnippet =
                     existingSnippet.copy(
                         name = request.name,
                         description = request.description,
-                        codeUrl = updatedUrl.toString(),
+                        codeUrl = existingSnippet.codeUrl, // Keep same codeUrl since container/key don't change
                         language = language,
                         version = request.version,
                         updatedAt = LocalDateTime.now(),

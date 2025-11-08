@@ -30,7 +30,7 @@ class AssetClient(
         val response =
             try {
                 webClient
-                    .post()
+                    .put()
                     .uri("/v1/asset/$container/$key")
                     .contentType(MediaType.APPLICATION_OCTET_STREAM)
                     .body(BodyInserters.fromValue(content))

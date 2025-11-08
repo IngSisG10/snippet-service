@@ -13,10 +13,10 @@ services:
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
       PRINTSCRIPT_SERVICE_URL: http://printscript-service:8080
-      ASSET_SERVICE_URL: http://asset_service:8080
+      ASSET_SERVICE_URL: http://asset-service:8080
     depends_on:
       - db
-      - asset_service
+      - asset-service
     networks:
       - shared_network
 
@@ -34,11 +34,11 @@ services:
     networks:
       - shared_network
 
-  asset_service:
+  asset-service:
     image: ghcr.io/austral-ingsis/snippet-asset-service:main.14
-    container_name: asset_service
+    container_name: asset-service
     ports:
-      - "8080:8080"
+      - "8081:8080"
     environment:
       AZURE_HOST: "http://azurite"
       NEW_RELIC_APP_NAME: "asset-service"
@@ -58,6 +58,8 @@ services:
       - "10002:10002"
     volumes:
       - blob:/workspace
+    networks:
+      - shared_network
 
 volumes:
   snippet-data:
