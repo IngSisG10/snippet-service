@@ -13,9 +13,10 @@ fun SnippetCreateRequest.toSnippet(
     language: Language,
     ownerId: UUID,
     codeUrl: String,
+    snippetId: UUID,
 ): Snippet =
     Snippet(
-        id = UUID.randomUUID(),
+        id = snippetId,
         name = this.name,
         codeUrl = codeUrl,
         language = language,

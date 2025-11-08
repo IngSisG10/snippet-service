@@ -138,13 +138,19 @@ class SnippetService(
                     } else {
                         UserContext.getCurrentUserId()
                     }
+
                 // Create asset into the bucket
-                // fixme -> hardcodeado el container y la key
-                // key -> a futuro vamos a tener que fixearlo para tener trazabilidad. Necesito conocer la key!
+                val snippetId = UUID.randomUUID()
 
-                val codeUrl = assetClient.createAsset(container = "snippets", key = UUID.randomUUID().toString(), request.code)
+                val codeUrl =
+                    assetClient.createAsset(
+                        container = "snippets",
+                        key = snippetId.toString(), // asociamos esta key con el ID del snippet
+                        content = request.code,
+                    )
 
-                val snippet = request.toSnippet(language, ownerUuid, codeUrl.toString())
+                // y creamos el snippet con ese ID
+                val snippet = request.toSnippet(language, ownerUuid, codeUrl.toString(), snippetId)
 
                 val saved = snippetRepository.save(snippet)
 
