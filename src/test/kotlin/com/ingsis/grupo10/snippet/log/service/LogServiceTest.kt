@@ -1,5 +1,7 @@
 package com.ingsis.grupo10.snippet.log.service
 
+import com.ingsis.grupo10.snippet.client.AssetClient
+import com.ingsis.grupo10.snippet.client.CreatedResult
 import com.ingsis.grupo10.snippet.dto.validation.LintErrorDTO
 import com.ingsis.grupo10.snippet.dto.validation.LintResultDTO
 import com.ingsis.grupo10.snippet.dto.validation.ValidationError
@@ -17,26 +19,30 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeEach
-import org.mockito.Mockito.any
+import org.mockito.ArgumentMatchers.any
+import org.mockito.Mockito.mock
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
-import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.test.context.bean.override.mockito.MockitoBean
+import org.mockito.kotlin.whenever
 import java.time.LocalDateTime
 import java.util.UUID
 import org.junit.jupiter.api.Test as JUnitTest
 
-@SpringBootTest
+// @SpringBootTest
 class LogServiceTest {
-    @MockitoBean
-    private lateinit var logRepository: LogRepository
+//    @MockitoBean
+//    private lateinit var logRepository: LogRepository
+//
+//    @MockitoBean
+//    private lateinit var tagRepository: TagRepository
+//
+//    @MockitoBean
+//    private lateinit var dataRepository: DataRepository
 
-    @MockitoBean
-    private lateinit var tagRepository: TagRepository
-
-    @MockitoBean
-    private lateinit var dataRepository: DataRepository
+    private val logRepository: LogRepository = mock()
+    private val tagRepository: TagRepository = mock()
+    private val dataRepository: DataRepository = mock()
 
     private lateinit var logService: LogService
 
@@ -44,17 +50,24 @@ class LogServiceTest {
     private lateinit var testTest: Test
     private lateinit var validationTag: Tag
     private lateinit var lintTag: Tag
+    private val assetClient: AssetClient = mock()
 
     @BeforeEach
     fun setUp() {
         logService = LogService(logRepository, tagRepository, dataRepository)
 
+        val snippetId = UUID.randomUUID()
+        val code = "let x: number = 5;"
+        val container = "snippets"
+        val codeUrl = "$container/$snippetId"
+
         val language = Language(UUID.randomUUID(), "PrintScript")
+
         testSnippet =
             Snippet(
                 id = UUID.randomUUID(),
                 name = "Test Snippet",
-                code = "let x: number = 5;",
+                codeUrl = codeUrl,
                 language = language,
                 description = "Test",
                 version = "1.1",
@@ -62,6 +75,12 @@ class LogServiceTest {
                 createdAt = LocalDateTime.now(),
                 updatedAt = LocalDateTime.now(),
             )
+
+        whenever(assetClient.createAsset("snippets", snippetId.toString(), "let x: number = 5;"))
+            .thenReturn(CreatedResult.Success(codeUrl))
+
+        whenever(assetClient.getAsset("snippets", testSnippet.id.toString()))
+            .thenReturn(code)
 
         testTest =
             Test(

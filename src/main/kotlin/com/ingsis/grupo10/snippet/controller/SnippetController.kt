@@ -1,5 +1,6 @@
 package com.ingsis.grupo10.snippet.controller
 
+import com.ingsis.grupo10.snippet.dto.Created
 import com.ingsis.grupo10.snippet.dto.SnippetCreateRequest
 import com.ingsis.grupo10.snippet.dto.SnippetDetailDto
 import com.ingsis.grupo10.snippet.dto.SnippetSummaryDto
@@ -24,6 +25,7 @@ class SnippetController(
 ) {
     // todo: file: Blob Storage
 
+    // getAll de toda la DB? No tiene sentido, deberia ser por el owner, o los shared.
     @GetMapping
     fun getAllSnippets(
         @RequestParam(required = false) name: String?,
@@ -50,10 +52,10 @@ class SnippetController(
         return ResponseEntity.ok(snippet)
     }
 
-    @PostMapping("/create")
+    @PostMapping
     fun createSnippet(
         @RequestBody request: SnippetCreateRequest,
-    ): ResponseEntity<SnippetDetailDto> {
+    ): ResponseEntity<Created> {
         // TODO: When auth-service is implemented, extract userId from JWT token
         // For now, use UserContext to get the current user ID
         val created = snippetService.createSnippet(request)

@@ -16,7 +16,7 @@ data class Snippet(
     @Id
     val id: UUID,
     val name: String,
-    val code: String,
+    val codeUrl: String,
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "language_id", nullable = false)
     val language: Language,

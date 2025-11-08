@@ -1,5 +1,6 @@
 package com.ingsis.grupo10.snippet.extension
 
+import com.ingsis.grupo10.snippet.dto.Created
 import com.ingsis.grupo10.snippet.dto.SnippetCreateRequest
 import com.ingsis.grupo10.snippet.dto.SnippetDetailDto
 import com.ingsis.grupo10.snippet.dto.SnippetSummaryDto
@@ -11,11 +12,13 @@ import java.util.UUID
 fun SnippetCreateRequest.toSnippet(
     language: Language,
     ownerId: UUID,
+    codeUrl: String,
+    snippetId: UUID,
 ): Snippet =
     Snippet(
-        id = UUID.randomUUID(),
+        id = snippetId,
         name = this.name,
-        code = this.code,
+        codeUrl = codeUrl,
         language = language,
         description = this.description,
         version = this.version,
@@ -34,6 +37,11 @@ fun Snippet.toSummaryDto(compliance: String? = null): SnippetSummaryDto =
         compliance = compliance,
     )
 
+fun Snippet.created(): Created =
+    Created(
+        id = this.id.toString(),
+    )
+
 fun Snippet.toDetailDto(): SnippetDetailDto =
     SnippetDetailDto(
         id = this.id,
@@ -43,5 +51,5 @@ fun Snippet.toDetailDto(): SnippetDetailDto =
         version = this.version,
         ownerId = this.ownerId,
         createdAt = this.createdAt,
-        code = this.code,
+        codeUrl = this.codeUrl,
     )

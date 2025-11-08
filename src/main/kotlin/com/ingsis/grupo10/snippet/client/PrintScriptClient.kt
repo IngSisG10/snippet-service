@@ -58,12 +58,17 @@ class PrintScriptClient(
         }
     }
 
-    private fun createDefaultLintConfig(): String =
-        """
-        {
-            "identifier_format": "camel case"
-        }
-        """.trimIndent()
+    private fun createDefaultLintConfig(): FileSystemResource {
+        val tempConfig = createTempFile(prefix = "config", suffix = ".json")
+        tempConfig.writeText(
+            """
+            {
+                "identifier_format": "camel case"
+            }
+            """.trimIndent(),
+        )
+        return FileSystemResource(tempConfig.toFile())
+    }
 
     private fun extractLineNumber(message: String): Int? {
         // Parse line number from error message
