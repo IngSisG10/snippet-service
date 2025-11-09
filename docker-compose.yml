@@ -1,3 +1,5 @@
+version: "3.9"
+
 services:
   app:
     build:
@@ -10,10 +12,13 @@ services:
       DB_URL: jdbc:postgresql://db:5432/${DB_NAME:-snippet_db}
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
-      PRINTSCRIPT_SERVICE_URL: ${PRINTSCRIPT_SERVICE_URL:-http://localhost:8080}
+      PRINTSCRIPT_SERVICE_URL: http://printscript-service:8080
+      ASSET_SERVICE_URL: http://asset-service:8080
     depends_on:
       - db
-
+      - asset-service
+    networks:
+      - shared_network
 
   db:
     container_name: snippet_db
@@ -24,10 +29,43 @@ services:
       POSTGRES_USER: ${DB_USERNAME}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME:-snippet_db}
-
     volumes:
       - snippet-data:/var/lib/postgresql/data
+    networks:
+      - shared_network
+
+  asset-service:
+    image: ghcr.io/austral-ingsis/snippet-asset-service:main.14
+    container_name: asset-service
+    ports:
+      - "8081:8080"
+    environment:
+      AZURE_HOST: "http://azurite"
+      NEW_RELIC_APP_NAME: "asset-service"
+      NEW_RELIC_AGENT_ENABLED: false
+    depends_on:
+      - azurite
+    networks:
+      - shared_network
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite
+    container_name: azurite
+    hostname: azurite
+    restart: always
+    ports:
+      - "10000:10000"
+      - "10001:10001"
+      - "10002:10002"
+    volumes:
+      - blob:/workspace
+    networks:
+      - shared_network
 
 volumes:
-    snippet-data:
+  snippet-data:
+  blob:
 
+
+networks:
+  shared_network:
+    external: true

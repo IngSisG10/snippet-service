@@ -1,5 +1,7 @@
 package com.ingsis.grupo10.snippet.snippet.service
 
+import com.ingsis.grupo10.snippet.client.AssetClient
+import com.ingsis.grupo10.snippet.client.CreatedResult
 import com.ingsis.grupo10.snippet.client.PrintScriptClient
 import com.ingsis.grupo10.snippet.dto.SnippetCreateRequest
 import com.ingsis.grupo10.snippet.dto.validation.ValidationError
@@ -13,6 +15,7 @@ import com.ingsis.grupo10.snippet.service.FormatConfigService
 import com.ingsis.grupo10.snippet.service.LintConfigService
 import com.ingsis.grupo10.snippet.service.LogService
 import com.ingsis.grupo10.snippet.service.SnippetService
+import com.ingsis.grupo10.snippet.util.AssetUtils.parseCodeUrl
 import com.ingsis.grupo10.snippet.util.UserContext
 import io.mockk.every
 import io.mockk.mockk
@@ -36,6 +39,7 @@ class SnippetServiceTest {
     private lateinit var lintConfigService: LintConfigService
     private lateinit var formatConfigService: FormatConfigService
     private lateinit var snippetService: SnippetService
+    private lateinit var assetClient: AssetClient
 
     private val testLanguage = Language(id = UUID.randomUUID(), name = "printscript")
     private val testUserId = UUID.fromString("00000000-0000-0000-0000-000000000000")
@@ -50,12 +54,21 @@ class SnippetServiceTest {
         logService = mockk(relaxed = true)
         lintConfigService = mockk()
         formatConfigService = mockk()
+        assetClient = mockk()
+
+     /*   val code = "let x: number = 5;"
+        val bucket = "snippets"
+        val codeUrl = "/$bucket/any-snippet-id"
+
+        every { assetClient.createAsset(bucket, any(), code) } returns "/$bucket/${id}"
+        every { assetClient.getAsset(bucket, any()) } returns code*/
 
         snippetService =
             SnippetService(
                 snippetRepository,
                 languageRepository,
                 printScriptClient,
+                assetClient,
                 logService,
                 lintConfigService,
                 formatConfigService,
@@ -79,13 +92,23 @@ class SnippetServiceTest {
     fun `getSnippetById should return snippet when found`() {
         val snippetId = UUID.randomUUID()
         val snippet = createTestSnippet(snippetId, testUserId)
+
         every { snippetRepository.findById(snippetId) } returns Optional.of(snippet)
+
+        every { assetClient.getAsset(any(), any()) } returns "let x: number = 5;"
 
         val result = snippetService.getSnippetById(snippetId)
 
+        // codeUrl -> (container, key)
+        val (snippetContainer, snippetKey) = parseCodeUrl(codeUrl = snippet.codeUrl)
+        val expectedCode = assetClient.getAsset(snippetContainer, snippetKey)
+
+        val (resultContainer, resultKey) = parseCodeUrl(codeUrl = result.codeUrl)
+        val resultCode = assetClient.getAsset(resultContainer, resultKey)
+
         assertEquals(snippet.id, result.id)
         assertEquals(snippet.name, result.name)
-        assertEquals(snippet.code, result.code)
+        assertEquals(expectedCode, resultCode)
         assertEquals(snippet.language.name, result.language)
     }
 
@@ -178,10 +201,11 @@ class SnippetServiceTest {
         every { languageRepository.findByName("printscript") } returns testLanguage
         every { snippetRepository.save(any()) } returns createdSnippet
 
+        every { assetClient.createAsset("snippets", any(), any()) } returns CreatedResult.Success("/snippets/fake-key")
+
         val result = snippetService.createSnippet(request, testUserIdString)
 
         assertEquals(createdSnippet.id, result.id)
-        assertEquals(createdSnippet.name, result.name)
         verify { snippetRepository.save(any()) }
         verify { logService.logValidation(any(), any()) }
     }
@@ -196,10 +220,11 @@ class SnippetServiceTest {
         every { languageRepository.findByName("printscript") } returns testLanguage
         every { snippetRepository.save(any()) } returns createdSnippet
 
+        every { assetClient.createAsset("snippets", any(), any()) } returns CreatedResult.Success("/snippets/fake-key")
+
         val result = snippetService.createSnippet(request)
 
         assertEquals(createdSnippet.id, result.id)
-        assertEquals(createdSnippet.name, result.name)
         verify { snippetRepository.save(any()) }
     }
 
@@ -254,6 +279,8 @@ class SnippetServiceTest {
         every { languageRepository.findByName("printscript") } returns testLanguage
         every { snippetRepository.save(any()) } returns updatedSnippet
 
+        every { assetClient.createAsset("snippets", any(), any()) } returns CreatedResult.Success("/snippets/fake-key")
+
         val result = snippetService.updateSnippet(snippetId, request, testUserIdString)
 
         assertEquals("Updated Snippet", result.name)
@@ -271,6 +298,8 @@ class SnippetServiceTest {
         every { printScriptClient.validateSnippet(any(), any()) } returns ValidationResult.Success
         every { languageRepository.findByName("printscript") } returns testLanguage
         every { snippetRepository.save(any()) } returns updatedSnippet
+
+        every { assetClient.createAsset("snippets", any(), any()) } returns CreatedResult.Success("/snippets/fake-key")
 
         val result = snippetService.updateSnippet(snippetId, request)
 
@@ -368,6 +397,8 @@ class SnippetServiceTest {
         every { lintConfigService.getConfigJson(testUserId) } returns "{}"
         every { printScriptClient.lintSnippet(any(), any(), any()) } returns mockk()
 
+        every { assetClient.getAsset(any(), any()) } returns "let x: number = 5;"
+
         val result = snippetService.lintSnippet(snippetId, testUserId)
 
         assertEquals(snippet.id, result.id)
@@ -384,6 +415,8 @@ class SnippetServiceTest {
         every { snippetRepository.findById(snippetId) } returns Optional.of(snippet)
         every { lintConfigService.getConfigJson(testUserId) } returns "{}"
         every { printScriptClient.lintSnippet(any(), any(), any()) } returns mockk()
+
+        every { assetClient.getAsset(any(), any()) } returns "let x: number = 5;"
 
         val result = snippetService.lintSnippet(snippetId)
 
@@ -416,6 +449,8 @@ class SnippetServiceTest {
                 every { formattedCode } returns "formatted code"
             }
 
+        every { assetClient.getAsset(any(), any()) } returns "let x: number = 5;"
+
         val result = snippetService.formatSnippet(snippetId, testUserId)
 
         assertEquals(snippet.id, result.id)
@@ -435,6 +470,8 @@ class SnippetServiceTest {
             mockk {
                 every { formattedCode } returns "formatted code"
             }
+
+        every { assetClient.getAsset(any(), any()) } returns "let x: number = 5;"
 
         val result = snippetService.formatSnippet(snippetId)
 
@@ -504,7 +541,7 @@ class SnippetServiceTest {
         Snippet(
             id = id,
             name = name,
-            code = "let x: number = 5;",
+            codeUrl = "snippets/$id",
             language = language,
             description = "Test description",
             version = "1.0",

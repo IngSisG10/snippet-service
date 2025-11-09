@@ -1,15 +1,19 @@
 package com.ingsis.grupo10.snippet.service
 
+import com.ingsis.grupo10.snippet.client.AssetClient
 import com.ingsis.grupo10.snippet.client.PrintScriptClient
+import com.ingsis.grupo10.snippet.dto.Created
 import com.ingsis.grupo10.snippet.dto.SnippetCreateRequest
 import com.ingsis.grupo10.snippet.dto.SnippetDetailDto
 import com.ingsis.grupo10.snippet.dto.SnippetSummaryDto
 import com.ingsis.grupo10.snippet.dto.validation.ValidationResult
 import com.ingsis.grupo10.snippet.exception.SnippetValidationException
+import com.ingsis.grupo10.snippet.extension.created
 import com.ingsis.grupo10.snippet.extension.toDetailDto
 import com.ingsis.grupo10.snippet.extension.toSnippet
 import com.ingsis.grupo10.snippet.repository.LanguageRepository
 import com.ingsis.grupo10.snippet.repository.SnippetRepository
+import com.ingsis.grupo10.snippet.util.AssetUtils.parseCodeUrl
 import com.ingsis.grupo10.snippet.util.UserContext
 import com.ingsis.grupo10.snippet.util.toUuidOrThrow
 import org.springframework.stereotype.Service
@@ -21,14 +25,11 @@ class SnippetService(
     private val snippetRepository: SnippetRepository,
     private val languageRepository: LanguageRepository,
     private val printScriptClient: PrintScriptClient,
+    private val assetClient: AssetClient,
     private val logService: LogService,
     private val lintConfigService: LintConfigService,
     private val formatConfigService: FormatConfigService,
 ) {
-    // En relacion al file -> solo consideralo como txt o un json
-    // Para poder mandar esa informacion luego con la metadata que tenemos
-    // El code es un file de ese estilo
-
     fun getSnippetById(id: UUID): SnippetDetailDto {
         val snippet =
             snippetRepository
@@ -110,7 +111,7 @@ class SnippetService(
     fun createSnippet(
         request: SnippetCreateRequest,
         userId: String? = null,
-    ): SnippetDetailDto {
+    ): Created {
         val validationResult =
             printScriptClient.validateSnippet(
                 code = request.code,
@@ -138,13 +139,27 @@ class SnippetService(
                         UserContext.getCurrentUserId()
                     }
 
-                val snippet = request.toSnippet(language, ownerUuid)
+                // Create asset into the bucket
+                val snippetId = UUID.randomUUID()
+
+                val assetResult =
+                    assetClient.createAsset(
+                        container = "snippets",
+                        key = snippetId.toString(), // asociamos esta key con el ID del snippet
+                        content = request.code,
+                    )
+
+                // Store as "container/key" format
+                val codeUrl = "snippets/$snippetId"
+
+                // y creamos el snippet con ese ID
+                val snippet = request.toSnippet(language, ownerUuid, codeUrl, snippetId)
 
                 val saved = snippetRepository.save(snippet)
 
                 logService.logValidation(saved, emptyList())
 
-                return saved.toDetailDto()
+                return saved.created()
             }
         }
     }
@@ -206,11 +221,21 @@ class SnippetService(
                     languageRepository.findByName(request.languageName)
                         ?: throw IllegalArgumentException("Language not supported")
 
+                val (container, key) = parseCodeUrl(existingSnippet.codeUrl)
+
+                // Update asset in the bucket
+                assetClient.createAsset(
+                    container = container,
+                    key = key,
+                    content = request.code, // newCode content
+                )
+
+                // Keep the same codeUrl format "container/key"
                 val updatedSnippet =
                     existingSnippet.copy(
                         name = request.name,
                         description = request.description,
-                        code = request.code,
+                        codeUrl = existingSnippet.codeUrl, // Keep same codeUrl since container/key don't change
                         language = language,
                         version = request.version,
                         updatedAt = LocalDateTime.now(),
@@ -240,9 +265,13 @@ class SnippetService(
 
         val lintConfig = lintConfigService.getConfigJson(userUuid)
 
+        val (container, key) = parseCodeUrl(snippet.codeUrl)
+
+        val code = assetClient.getAsset(container, key)
+
         val lintResult =
             printScriptClient.lintSnippet(
-                code = snippet.code,
+                code = code,
                 version = snippet.version,
                 lintConfig = lintConfig,
             )
@@ -266,9 +295,13 @@ class SnippetService(
 
         val formatConfig = formatConfigService.getConfigJson(userUuid)
 
+        val (container, key) = parseCodeUrl(snippet.codeUrl)
+
+        val code = assetClient.getAsset(container, key)
+
         val formatResult =
             printScriptClient.formatSnippet(
-                code = snippet.code,
+                code = code,
                 version = snippet.version,
                 formatConfig = formatConfig,
             )
