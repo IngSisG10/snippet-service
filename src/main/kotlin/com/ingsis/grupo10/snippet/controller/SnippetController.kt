@@ -4,6 +4,8 @@ import com.ingsis.grupo10.snippet.dto.Created
 import com.ingsis.grupo10.snippet.dto.SnippetCreateRequest
 import com.ingsis.grupo10.snippet.dto.SnippetDetailDto
 import com.ingsis.grupo10.snippet.dto.SnippetSummaryDto
+import com.ingsis.grupo10.snippet.producer.FormatRequestProducer
+import com.ingsis.grupo10.snippet.producer.LintRequestProducer
 import com.ingsis.grupo10.snippet.service.SnippetService
 import com.ingsis.grupo10.snippet.util.UserContext
 import org.springframework.http.ResponseEntity
@@ -22,6 +24,8 @@ import java.util.UUID
 @RequestMapping("/snippets")
 class SnippetController(
     private val snippetService: SnippetService,
+    private val lintRequestProducer: LintRequestProducer,
+    private val formatRequestProducer: FormatRequestProducer,
 ) {
     // todo: file: Blob Storage
 
@@ -88,6 +92,7 @@ class SnippetController(
         @PathVariable id: UUID,
     ): ResponseEntity<SnippetDetailDto> {
         // TODO: When auth-service is implemented, extract userId from JWT token
+        // TODO: Produce a message to a queue instead of processing synchronously
         // For now, use UserContext to get the current user ID
         val snippet = snippetService.lintSnippet(id)
         return ResponseEntity.ok(snippet)
@@ -98,6 +103,7 @@ class SnippetController(
         @PathVariable id: UUID,
     ): ResponseEntity<SnippetDetailDto> {
         // TODO: When auth-service is implemented, extract userId from JWT token
+        // TODO: Produce a message to a queue instead of processing synchronously
         // For now, use UserContext to get the current user ID
         val snippet = snippetService.formatSnippet(id)
         return ResponseEntity.ok(snippet)
