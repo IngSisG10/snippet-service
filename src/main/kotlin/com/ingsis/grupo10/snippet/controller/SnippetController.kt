@@ -1,11 +1,13 @@
 package com.ingsis.grupo10.snippet.controller
 
+import com.ingsis.grupo10.snippet.client.AuthClient
 import com.ingsis.grupo10.snippet.dto.Created
 import com.ingsis.grupo10.snippet.dto.SnippetCreateRequest
 import com.ingsis.grupo10.snippet.dto.SnippetDetailDto
 import com.ingsis.grupo10.snippet.dto.SnippetSummaryDto
 import com.ingsis.grupo10.snippet.service.SnippetService
 import com.ingsis.grupo10.snippet.util.UserContext
+import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
@@ -13,6 +15,7 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
@@ -22,8 +25,16 @@ import java.util.UUID
 @RequestMapping("/snippets")
 class SnippetController(
     private val snippetService: SnippetService,
+    private val authClient: AuthClient,
 ) {
     // todo: file: Blob Storage
+
+    private fun extractToken(authHeader: String?): String? {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return null
+        }
+        return authHeader.substring(7)
+    }
 
     // getAll de toda la DB? No tiene sentido, deberia ser por el owner, o los shared.
     @GetMapping
@@ -52,13 +63,32 @@ class SnippetController(
         return ResponseEntity.ok(snippet)
     }
 
-    @PostMapping
+    @PostMapping("/create")
     fun createSnippet(
+        @RequestHeader("Authorization") authHeader: String,
         @RequestBody request: SnippetCreateRequest,
     ): ResponseEntity<Created> {
-        // TODO: When auth-service is implemented, extract userId from JWT token
-        // For now, use UserContext to get the current user ID
-        val created = snippetService.createSnippet(request)
+        val token =
+            extractToken(authHeader)
+                ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build()
+
+        // Get user from /users/me endpoint
+        val user =
+            authClient.getCurrentUser(token)
+                ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build()
+
+        // user.id is a String (Auth0 subject like "auth0|65fb2cd13f1234567890abcd")
+        val created = snippetService.createSnippet(request, user.userId)
+
+        // Register snippet ownership - created.id is a String (from Created DTO)
+        // Convert it back to UUID for the auth service
+        val snippetId = UUID.fromString(created.id)
+        val registered = authClient.registerSnippet(snippetId, user.userId, token)
+
+        if (!registered) {
+            println("Warning: Failed to register snippet ownership in auth service")
+        }
+
         return ResponseEntity.ok(created)
     }
 

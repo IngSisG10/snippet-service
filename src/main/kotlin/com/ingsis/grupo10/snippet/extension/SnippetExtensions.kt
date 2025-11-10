@@ -11,7 +11,7 @@ import java.util.UUID
 
 fun SnippetCreateRequest.toSnippet(
     language: Language,
-    ownerId: UUID,
+    ownerId: String,
     codeUrl: String,
     snippetId: UUID,
 ): Snippet =

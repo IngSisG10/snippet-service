@@ -22,7 +22,7 @@ data class Snippet(
     val language: Language,
     val description: String?,
     val version: String,
-    val ownerId: UUID,
+    val ownerId: String,
     val createdAt: LocalDateTime,
     val updatedAt: LocalDateTime,
     @OneToMany(mappedBy = "snippet")
