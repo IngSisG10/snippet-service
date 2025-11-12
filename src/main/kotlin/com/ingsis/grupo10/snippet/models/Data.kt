@@ -10,7 +10,7 @@ import java.util.UUID
 
 @Entity
 @Table(name = "Data")
-data class Data(
+class Data(
     @Id
     val id: UUID,
     @ManyToOne(fetch = FetchType.LAZY)
@@ -18,4 +18,14 @@ data class Data(
     val log: Log,
     val name: String,
     val data: String,
-)
+) {
+    override fun hashCode(): Int = id.hashCode()
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is Data) return false
+        return id == other.id
+    }
+
+    override fun toString(): String = "Data(id=$id, name='$name')"
+}

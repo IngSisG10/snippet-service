@@ -95,10 +95,29 @@ class SnippetController(
     @DeleteMapping("/{id}")
     fun deleteSnippet(
         @PathVariable id: UUID,
+        @RequestHeader("Authorization") authHeader: String,
     ): ResponseEntity<Void> {
-        // TODO: When auth-service is implemented, extract userId from JWT token
-        // For now, use UserContext to get the current user ID
+        val token =
+            extractToken(authHeader)
+                ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build()
+
+        val user =
+            authClient.getCurrentUser(token)
+                ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build()
+
+        val hasOwnerPermission = authClient.checkPermission(id, token, "OWNER")
+
+        if (!hasOwnerPermission) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
+        }
+
         snippetService.deleteSnippetById(id)
+
+        val unregistered = authClient.unregisterSnippet(id, token)
+
+        if (!unregistered) {
+            println("Warning: Failed to unregister snippet in auth service")
+        }
         return ResponseEntity.ok().build()
     }
 

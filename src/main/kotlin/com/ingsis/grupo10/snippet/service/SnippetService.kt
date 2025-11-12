@@ -199,7 +199,6 @@ class SnippetService(
 
         // Validate user ownership if userId is provided
         if (userId != null) {
-            val userUuid = UserContext.toUuidOrThrow(userId, "Invalid userId format")
             if (existingSnippet.ownerId != userId) {
                 throw IllegalArgumentException("User does not have permission to update this snippet")
             }
@@ -230,19 +229,21 @@ class SnippetService(
                 assetClient.createAsset(
                     container = container,
                     key = key,
-                    content = request.code, // newCode content
+                    content = request.code,
                 )
 
-                // Keep the same codeUrl format "container/key"
+                // Create a new instance with updated values
                 val updatedSnippet =
-                    existingSnippet.copy(
+                    Snippet(
+                        id = existingSnippet.id, // Keep same ID
                         name = request.name,
                         description = request.description,
-                        codeUrl = existingSnippet.codeUrl, // Keep same codeUrl since container/key don't change
+                        codeUrl = existingSnippet.codeUrl,
                         language = language,
                         version = request.version,
-                        updatedAt = LocalDateTime.now(),
-                        ownerId = existingSnippet.ownerId, // Keep existing ownerId for update
+                        ownerId = existingSnippet.ownerId,
+                        createdAt = existingSnippet.createdAt, // Keep original creation time
+                        updatedAt = LocalDateTime.now(), // Update timestamp
                     )
 
                 val saved = snippetRepository.save(updatedSnippet)

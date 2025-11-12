@@ -31,14 +31,14 @@ import org.junit.jupiter.api.Test as JUnitTest
 
 // @SpringBootTest
 class LogServiceTest {
-//    @MockitoBean
-//    private lateinit var logRepository: LogRepository
-//
-//    @MockitoBean
-//    private lateinit var tagRepository: TagRepository
-//
-//    @MockitoBean
-//    private lateinit var dataRepository: DataRepository
+    //    @MockitoBean
+    //    private lateinit var logRepository: LogRepository
+    //
+    //    @MockitoBean
+    //    private lateinit var tagRepository: TagRepository
+    //
+    //    @MockitoBean
+    //    private lateinit var dataRepository: DataRepository
 
     private val logRepository: LogRepository = mock()
     private val tagRepository: TagRepository = mock()
