@@ -101,10 +101,6 @@ class SnippetController(
             extractToken(authHeader)
                 ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build()
 
-        val user =
-            authClient.getCurrentUser(token)
-                ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build()
-
         val hasOwnerPermission = authClient.checkPermission(id, token, "OWNER")
 
         if (!hasOwnerPermission) {
@@ -125,9 +121,19 @@ class SnippetController(
     fun updateSnippet(
         @PathVariable id: UUID,
         @RequestBody request: SnippetCreateRequest,
+        @RequestHeader("Authorization") authHeader: String,
     ): ResponseEntity<SnippetDetailDto> {
-        // TODO: When auth-service is implemented, extract userId from JWT token
-        // For now, use UserContext to get the current user ID
+       val token =
+           extractToken(authHeader)
+                ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build()
+
+       val hasOwnerPermission = authClient.checkPermission(id, token, "OWNER")
+
+        if (!hasOwnerPermission) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
+        }
+
+
         val updated = snippetService.updateSnippet(id, request)
         return ResponseEntity.ok(updated)
     }
