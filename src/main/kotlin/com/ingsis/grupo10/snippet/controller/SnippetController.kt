@@ -133,7 +133,6 @@ class SnippetController(
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
         }
 
-
         val updated = snippetService.updateSnippet(id, request)
         return ResponseEntity.ok(updated)
     }
@@ -171,4 +170,7 @@ class SnippetController(
         val snippets = snippetService.getSnippetsByUser(userId)
         return ResponseEntity.ok(snippets)
     }
+
+    //TODO: add share snippet method.
+    // TODO: Add auth verification
 }
