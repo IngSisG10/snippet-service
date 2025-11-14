@@ -68,7 +68,7 @@ class AuthClient(
             val response =
                 webClient
                     .get()
-                    .uri("/permissions/snippets/$snippetId/check?requiredPermission=$permission")
+                    .uri("/permissions/snippets/$snippetId/check?userId=$userId&requiredPermission=$permission")
                     .accept(MediaType.APPLICATION_JSON)
                     .retrieve()
                     .bodyToMono<PermissionCheckResponse>()
@@ -99,12 +99,31 @@ class AuthClient(
             false
         }
 
+    fun getUserOwnedSnippets(userId: String): List<UUID> =
+        try {
+            val response =
+                webClient
+                    .get()
+                    .uri("/permissions/owned-snippets?userId=$userId")
+                    .accept(MediaType.APPLICATION_JSON)
+                    .retrieve()
+                    .bodyToMono<Array<SnippetPermissionInfo>>()
+                    .block()
+
+            response?.map { it.snippetId } ?: emptyList()
+        } catch (ex: Exception) {
+            println("Error getting owned snippets: ${ex.message}")
+            ex.printStackTrace()
+            emptyList()
+        }
+
+    // Get all snippets the user has any access to (READ, WRITE, or OWNER)
     fun getUserAccessibleSnippets(userId: String): List<UUID> =
         try {
             val response =
                 webClient
                     .get()
-                    .uri("/permissions/my-snippets?userId=$userId")
+                    .uri("/permissions/accessible-snippets?userId=$userId")
                     .accept(MediaType.APPLICATION_JSON)
                     .retrieve()
                     .bodyToMono<Array<SnippetPermissionInfo>>()
@@ -113,6 +132,7 @@ class AuthClient(
             response?.map { it.snippetId } ?: emptyList()
         } catch (ex: Exception) {
             println("Error getting accessible snippets: ${ex.message}")
+            ex.printStackTrace()
             emptyList()
         }
 }

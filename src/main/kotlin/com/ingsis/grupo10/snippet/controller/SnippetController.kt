@@ -201,6 +201,37 @@ class SnippetController(
         return ResponseEntity.ok(snippets)
     }
 
+    @GetMapping("/my-owned-snippets")
+    fun getMyOwnedSnippets(
+        @AuthenticationPrincipal jwt: Jwt,
+    ): ResponseEntity<List<SnippetSummaryDto>> {
+        val userId = jwt.subject
+
+        // Get only owned snippet IDs
+        val snippetIds = authClient.getUserOwnedSnippets(userId)
+
+        val snippets =
+            snippetIds.mapNotNull { snippetId ->
+                try {
+                    snippetService.getSnippetById(snippetId).let { detail ->
+                        SnippetSummaryDto(
+                            id = detail.id,
+                            name = detail.name,
+                            language = detail.language,
+                            version = detail.version,
+                            createdAt = detail.createdAt,
+                            compliance = null,
+                        )
+                    }
+                } catch (ex: Exception) {
+                    println("Error loading snippet $snippetId: ${ex.message}")
+                    null
+                }
+            }
+
+        return ResponseEntity.ok(snippets)
+    }
+
     // TODO: add share snippet method.
     // TODO: Add auth verification
 }
