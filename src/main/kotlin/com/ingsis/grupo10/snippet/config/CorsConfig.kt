@@ -1,4 +1,4 @@
-package com.ingsis.grupo10.snippet.security
+package com.ingsis.grupo10.snippet.config
 
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean

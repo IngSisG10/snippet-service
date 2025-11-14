@@ -10,10 +10,14 @@ class AuthClientConfig {
     @Value("\${auth.service.url}")
     private lateinit var authServiceUrl: String
 
+    @Value("\${service.api.key}")
+    private lateinit var serviceApiKey: String
+
     @Bean
     fun authWebClient(): WebClient =
         WebClient
             .builder()
             .baseUrl(authServiceUrl)
+            .defaultHeader("X-Service-API-Key", serviceApiKey) // ← NEW! Add API key header
             .build()
 }

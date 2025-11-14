@@ -17,9 +17,9 @@ class AuthClient(
 ) {
     fun registerSnippet(
         snippetId: UUID,
-        ownerId: String,
+        userId: String,
     ): Boolean {
-        val request = RegisterSnippetRequest(snippetId, ownerId)
+        val request = RegisterSnippetRequest(snippetId, userId)
 
         return try {
             val response =
@@ -38,6 +38,26 @@ class AuthClient(
             false
         }
     }
+
+    fun checkUserExists(userId: String): Boolean =
+        try {
+            val requestBody = mapOf("userId" to userId)
+
+            val response =
+                webClient
+                    .post() // ← Changed from GET to POST
+                    .uri("/users/exists") // ← No more path variable
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .bodyValue(requestBody)
+                    .retrieve()
+                    .bodyToMono<Map<String, Boolean>>()
+                    .block()
+
+            response?.get("exists") ?: false
+        } catch (ex: Exception) {
+            println("Error checking if user exists: ${ex.message}")
+            false
+        }
 
     fun checkPermission(
         snippetId: UUID,

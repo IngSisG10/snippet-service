@@ -14,8 +14,6 @@ import com.ingsis.grupo10.snippet.models.Snippet
 import com.ingsis.grupo10.snippet.repository.LanguageRepository
 import com.ingsis.grupo10.snippet.repository.SnippetRepository
 import com.ingsis.grupo10.snippet.util.AssetUtils.parseCodeUrl
-import com.ingsis.grupo10.snippet.util.UserContext
-import com.ingsis.grupo10.snippet.util.toUuidOrThrow
 import org.springframework.stereotype.Service
 import java.time.LocalDateTime
 import java.util.UUID
@@ -41,6 +39,7 @@ class SnippetService(
 
     fun createSnippet(
         request: SnippetCreateRequest,
+        snippetId: UUID,
     ): Created {
         val validationResult =
             printScriptClient.validateSnippet(
@@ -60,9 +59,6 @@ class SnippetService(
                 val language =
                     languageRepository.findByName(request.languageName)
                         ?: throw IllegalArgumentException("Language not supported")
-
-                // Create asset into the bucket
-                val snippetId = UUID.randomUUID()
 
                 val assetResult =
                     assetClient.createAsset(
@@ -165,9 +161,7 @@ class SnippetService(
         return snippets
     }
 
-    fun deleteSnippetById(
-        id: UUID,
-    ) {
+    fun deleteSnippetById(id: UUID) {
         val snippet =
             snippetRepository
                 .findById(id)
@@ -233,15 +227,11 @@ class SnippetService(
         }
     }
 
-
-    fun lintSnippet(
-        id: UUID,
-    ): SnippetDetailDto {
+    fun lintSnippet(id: UUID): SnippetDetailDto {
         val snippet =
             snippetRepository
                 .findById(id)
                 .orElseThrow { IllegalArgumentException("Snippet not found") }
-
 
         // TODO: Get user-specific lint config - for now use default
         val lintConfig = "{}" // Default config
@@ -263,15 +253,13 @@ class SnippetService(
         return snippet.toDetailDto()
     }
 
-    fun formatSnippet(
-        id: UUID,
-    ): SnippetDetailDto {
+    fun formatSnippet(id: UUID): SnippetDetailDto {
         val snippet =
             snippetRepository
                 .findById(id)
                 .orElseThrow { IllegalArgumentException("Snippet not found") }
 
-        //TODO: Get user-specific format config - for now use default
+        // TODO: Get user-specific format config - for now use default
         val formatConfig = "{}" // Default config
 //        val formatConfig = formatConfigService.getConfigJson(userUuid)
 
@@ -291,27 +279,27 @@ class SnippetService(
         return snippet.toDetailDto()
     }
 
-    /**
-     * Gets all snippets owned by a specific user.
-     *
-     * @param userId The user ID to filter snippets by
-     * @return List of snippets owned by the user
-     */
-    // This now gets snippets by querying auth service for user's accessible snippets
+//    /**
+//     * Gets all snippets owned by a specific user.
+//     *
+//     * @param userId The user ID to filter snippets by
+//     * @return List of snippets owned by the user
+//     */
+// This now gets snippets by querying auth service for user's accessible snippets
 
-    fun getSnippetsByUser(userId: String): List<SnippetSummaryDto> {
-        val userSnippets = snippetRepository.findByOwnerId(userId)
-
-        return userSnippets.map { snippet ->
-            val lintStatus = logService.getLatestLintStatus(snippet.id)
-            SnippetSummaryDto(
-                id = snippet.id,
-                name = snippet.name,
-                language = snippet.language.name,
-                version = snippet.version,
-                createdAt = snippet.createdAt,
-                compliance = lintStatus.status,
-            )
-        }
-    }
+//    fun getSnippetsByUser(userId: String): List<SnippetSummaryDto> {
+//        val userSnippets = snippetRepository.findByOwnerId(userId)
+//
+//        return userSnippets.map { snippet ->
+//            val lintStatus = logService.getLatestLintStatus(snippet.id)
+//            SnippetSummaryDto(
+//                id = snippet.id,
+//                name = snippet.name,
+//                language = snippet.language.name,
+//                version = snippet.version,
+//                createdAt = snippet.createdAt,
+//                compliance = lintStatus.status,
+//            )
+//        }
+//    }
 }
