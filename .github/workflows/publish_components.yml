@@ -1,0 +1,17 @@
+name: Publish Components
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish-package:
+    uses: IngSisG10/snippet-infrastructure/.github/workflows/publish_packages.yml@main
+    secrets: inherit
+
+  publish-img:
+    uses: IngSisG10/snippet-infrastructure/.github/workflows/publish_docker_img_to_ghcr.yml@main
+    secrets: inherit
