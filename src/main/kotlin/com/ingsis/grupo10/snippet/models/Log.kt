@@ -14,24 +14,19 @@ import java.util.UUID
 @Entity
 @Table(name = "Log")
 class Log(
-
     @Id
     val id: UUID,
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "tag_id", nullable = false)
     val tag: Tag,
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "snippet_id")
     val snippet: Snippet?,
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "test_id")
     val test: Test?,
     val date: LocalDateTime,
-
-    @OneToMany(mappedBy = "log", cascade = [CascadeType.REMOVE], orphanRemoval = true )
+    @OneToMany(mappedBy = "log", cascade = [CascadeType.REMOVE], orphanRemoval = true)
     val dataEntries: Set<Data> = emptySet(),
 ) {
     override fun hashCode(): Int = id.hashCode()

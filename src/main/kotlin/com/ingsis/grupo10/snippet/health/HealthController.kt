@@ -6,17 +6,13 @@ import org.springframework.web.bind.annotation.RestController
 
 @RestController
 class HealthController {
-
     @GetMapping("/")
-    fun getHealth(): ResponseEntity<String> =
-        ResponseEntity.ok("Snippet service is alive!")
+    fun getHealth(): ResponseEntity<String> = ResponseEntity.ok("Snippet service is alive!")
 
     @GetMapping("/health")
-    fun healthCheck(): ResponseEntity<String> =
-        ResponseEntity.ok("OK")
+    fun healthCheck(): ResponseEntity<String> = ResponseEntity.ok("OK")
 
     // This endpoint requires authentication (JWT token)
     @GetMapping("/secret/health")
-    fun authenticatedHealth(): ResponseEntity<String> =
-        ResponseEntity.ok("You are authenticated and the service is alive!")
+    fun authenticatedHealth(): ResponseEntity<String> = ResponseEntity.ok("You are authenticated and the service is alive!")
 }

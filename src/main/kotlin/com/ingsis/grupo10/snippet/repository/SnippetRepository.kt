@@ -11,5 +11,5 @@ interface SnippetRepository : JpaRepository<Snippet, UUID> {
      * @param ownerId The owner's UUID
      * @return List of snippets owned by the user
      */
-    fun findByOwnerId(ownerId: String): List<Snippet>
+//    fun findByOwnerId(ownerId: String): List<Snippet>
 }

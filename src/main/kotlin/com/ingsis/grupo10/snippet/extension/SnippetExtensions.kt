@@ -11,7 +11,6 @@ import java.util.UUID
 
 fun SnippetCreateRequest.toSnippet(
     language: Language,
-    ownerId: String,
     codeUrl: String,
     snippetId: UUID,
 ): Snippet =
@@ -22,7 +21,6 @@ fun SnippetCreateRequest.toSnippet(
         language = language,
         description = this.description,
         version = this.version,
-        ownerId = ownerId,
         createdAt = LocalDateTime.now(),
         updatedAt = LocalDateTime.now(),
     )
@@ -49,7 +47,6 @@ fun Snippet.toDetailDto(): SnippetDetailDto =
         description = this.description,
         language = this.language.name,
         version = this.version,
-        ownerId = this.ownerId,
         createdAt = this.createdAt,
         codeUrl = this.codeUrl,
     )

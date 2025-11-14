@@ -1,4 +1,4 @@
-package com.ingsis.grupo10.snippetservice.security
+package com.ingsis.grupo10.snippet.security
 
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
@@ -20,17 +20,25 @@ class OAuth2ResourceServerSecurityConfiguration(
     @Value("\${auth0.audience}") private val audience: String,
     @Value("\${spring.security.oauth2.resourceserver.jwt.issuer-uri}") private val issuer: String,
 ) {
+    init {
+        println("========================================")
+        println("=== OAuth2 Configuration Loading ===")
+        println("Issuer: $issuer")
+        println("Audience: $audience")
+        println("========================================")
+    }
+
     @Bean
     fun filterChain(http: HttpSecurity): SecurityFilterChain {
+        println("Configuring Security Filter Chain...")
         http
             .authorizeHttpRequests {
                 it
-                    .requestMatchers("/","/health","/actuator/health", "/public/**")
+                    .requestMatchers("/", "/health", "/actuator/health", "/public/**")
                     .permitAll()
                     .anyRequest()
                     .authenticated()
-            }
-            .oauth2ResourceServer { it.jwt(withDefaults()) }
+            }.oauth2ResourceServer { it.jwt(withDefaults()) }
             .cors(withDefaults())
             .csrf { it.disable() }
 
@@ -39,6 +47,7 @@ class OAuth2ResourceServerSecurityConfiguration(
 
     @Bean
     fun jwtDecoder(): JwtDecoder {
+        println("Creating JWT Decoder with issuer: $issuer")
         val jwtDecoder = NimbusJwtDecoder.withIssuerLocation(issuer).build()
         val audienceValidator: OAuth2TokenValidator<Jwt> = AudienceValidator(audience)
         val withIssuer: OAuth2TokenValidator<Jwt> = JwtValidators.createDefaultWithIssuer(issuer)

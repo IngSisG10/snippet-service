@@ -23,7 +23,6 @@ class Snippet(
     val language: Language,
     val description: String?,
     val version: String,
-    val ownerId: String,
     val createdAt: LocalDateTime,
     val updatedAt: LocalDateTime,
     @OneToMany(mappedBy = "snippet", cascade = [CascadeType.REMOVE], orphanRemoval = true)
@@ -37,5 +36,5 @@ class Snippet(
         return id == other.id
     }
 
-    override fun toString(): String = "Snippet(id=$id, name='$name', version='$version', ownerId='$ownerId')"
+    override fun toString(): String = "Snippet(id=$id, name='$name', version='$version')"
 }

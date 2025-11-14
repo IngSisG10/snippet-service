@@ -3,9 +3,7 @@ package com.ingsis.grupo10.snippet.client
 import com.ingsis.grupo10.snippet.dto.snippets.PermissionCheckResponse
 import com.ingsis.grupo10.snippet.dto.snippets.RegisterSnippetRequest
 import com.ingsis.grupo10.snippet.dto.snippets.SnippetPermissionInfo
-import com.ingsis.grupo10.snippet.dto.snippets.ValidateTokenResponse
 import org.springframework.beans.factory.annotation.Qualifier
-import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.WebClient
@@ -17,25 +15,9 @@ class AuthClient(
     @Qualifier("authWebClient")
     private val webClient: WebClient,
 ) {
-    fun getCurrentUser(token: String): ValidateTokenResponse? =
-        try {
-            webClient
-                .get()
-                .uri("/users/me")
-                .header(HttpHeaders.AUTHORIZATION, "Bearer $token")
-                .accept(MediaType.APPLICATION_JSON)
-                .retrieve()
-                .bodyToMono<ValidateTokenResponse>()
-                .block()
-        } catch (ex: Exception) {
-            println("Error validating token: ${ex.message}")
-            null
-        }
-
     fun registerSnippet(
         snippetId: UUID,
         ownerId: String,
-        token: String,
     ): Boolean {
         val request = RegisterSnippetRequest(snippetId, ownerId)
 
@@ -44,7 +26,6 @@ class AuthClient(
                 webClient
                     .post()
                     .uri("/permissions/snippets")
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer $token")
                     .contentType(MediaType.APPLICATION_JSON)
                     .bodyValue(request)
                     .retrieve()
@@ -60,7 +41,7 @@ class AuthClient(
 
     fun checkPermission(
         snippetId: UUID,
-        token: String,
+        userId: String,
         permission: String = "READ",
     ): Boolean =
         try {
@@ -68,7 +49,6 @@ class AuthClient(
                 webClient
                     .get()
                     .uri("/permissions/snippets/$snippetId/check?requiredPermission=$permission")
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer $token")
                     .accept(MediaType.APPLICATION_JSON)
                     .retrieve()
                     .bodyToMono<PermissionCheckResponse>()
@@ -82,14 +62,13 @@ class AuthClient(
 
     fun unregisterSnippet(
         snippetId: UUID,
-        token: String,
+        userId: String,
     ): Boolean =
         try {
             val response =
                 webClient
                     .delete()
-                    .uri("/permissions/snippets/$snippetId")
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer $token")
+                    .uri("/permissions/snippets/$snippetId?userId=$userId")
                     .retrieve()
                     .toBodilessEntity()
                     .block()
@@ -100,13 +79,12 @@ class AuthClient(
             false
         }
 
-    fun getUserAccessibleSnippets(token: String): List<UUID> =
+    fun getUserAccessibleSnippets(userId: String): List<UUID> =
         try {
             val response =
                 webClient
                     .get()
-                    .uri("/permissions/my-snippets")
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer $token")
+                    .uri("/permissions/my-snippets?userId=$userId")
                     .accept(MediaType.APPLICATION_JSON)
                     .retrieve()
                     .bodyToMono<Array<SnippetPermissionInfo>>()

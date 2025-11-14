@@ -1,4 +1,4 @@
-package com.ingsis.grupo10.snippetservice.security
+package com.ingsis.grupo10.snippet.security
 
 import org.springframework.security.oauth2.core.OAuth2Error
 import org.springframework.security.oauth2.core.OAuth2TokenValidator
