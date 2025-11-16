@@ -4,7 +4,7 @@ import java.util.UUID
 
 data class FormatConfigResponse(
     val id: UUID,
-    val userId: UUID,
+    val userId: String,
     val spaceBeforeColon: Boolean?,
     val spaceAfterColon: Boolean?,
     val spaceAroundEquals: Boolean?,

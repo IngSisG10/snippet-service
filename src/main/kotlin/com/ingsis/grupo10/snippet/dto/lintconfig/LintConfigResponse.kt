@@ -4,7 +4,7 @@ import java.util.UUID
 
 data class LintConfigResponse(
     val id: UUID,
-    val userId: UUID,
+    val userId: String,
     val identifierFormat: String?,
     val printlnExpressionAllowed: Boolean?,
     val readInputExpressionAllowed: Boolean?,

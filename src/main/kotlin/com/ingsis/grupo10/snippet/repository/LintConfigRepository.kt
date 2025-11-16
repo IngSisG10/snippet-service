@@ -7,5 +7,5 @@ import java.util.UUID
 
 @Repository
 interface LintConfigRepository : JpaRepository<LintConfig, UUID> {
-    fun findByUserId(userId: UUID): LintConfig?
+    fun findByUserId(userId: String): LintConfig?
 }

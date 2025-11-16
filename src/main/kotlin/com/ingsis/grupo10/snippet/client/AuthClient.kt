@@ -135,4 +135,21 @@ class AuthClient(
             ex.printStackTrace()
             emptyList()
         }
+
+    fun getUserReadSnippets(userId: String): List<UUID> =
+        try {
+            val response =
+                webClient
+                    .get()
+                    .uri("/permissions/read-snippets?userId=$userId")
+                    .accept(MediaType.APPLICATION_JSON)
+                    .retrieve()
+                    .bodyToMono<Array<SnippetPermissionInfo>>()
+                    .block()
+            response?.map { it.snippetId } ?: emptyList()
+        } catch (ex: Exception) {
+            println("Error getting accessible snippets: ${ex.message}")
+            ex.printStackTrace()
+            emptyList()
+        }
 }
