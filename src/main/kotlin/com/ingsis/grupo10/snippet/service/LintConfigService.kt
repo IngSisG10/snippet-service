@@ -13,7 +13,7 @@ class LintConfigService(
     private val lintConfigRepository: LintConfigRepository,
     private val objectMapper: ObjectMapper,
 ) {
-    fun getConfig(userId: UUID): LintConfigResponse {
+    fun getConfig(userId: String): LintConfigResponse {
         val config =
             lintConfigRepository.findByUserId(userId)
                 ?: createDefaultConfig(userId)
@@ -22,7 +22,7 @@ class LintConfigService(
     }
 
     fun updateConfig(
-        userId: UUID,
+        userId: String,
         request: LintConfigRequest,
     ): LintConfigResponse {
         val existingConfig = lintConfigRepository.findByUserId(userId)
@@ -49,7 +49,7 @@ class LintConfigService(
         return parseConfigToResponse(config)
     }
 
-    fun getConfigJson(userId: UUID): String {
+    fun getConfigJson(userId: String): String {
         val config =
             lintConfigRepository.findByUserId(userId)
                 ?: createDefaultConfig(userId)
@@ -57,7 +57,7 @@ class LintConfigService(
         return config.config
     }
 
-    private fun createDefaultConfig(userId: UUID): LintConfig {
+    private fun createDefaultConfig(userId: String): LintConfig {
         val defaultJson =
             """
             {

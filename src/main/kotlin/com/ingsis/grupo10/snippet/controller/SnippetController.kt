@@ -1,14 +1,16 @@
 package com.ingsis.grupo10.snippet.controller
 
-import com.ingsis.grupo10.snippet.dto.Created
+import com.ingsis.grupo10.snippet.client.AuthClient
 import com.ingsis.grupo10.snippet.dto.SnippetCreateRequest
 import com.ingsis.grupo10.snippet.dto.SnippetDetailDto
 import com.ingsis.grupo10.snippet.dto.SnippetSummaryDto
 import com.ingsis.grupo10.snippet.producer.FormatRequestProducer
 import com.ingsis.grupo10.snippet.producer.LintRequestProducer
 import com.ingsis.grupo10.snippet.service.SnippetService
-import com.ingsis.grupo10.snippet.util.UserContext
+import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.security.core.annotation.AuthenticationPrincipal
+import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -24,6 +26,7 @@ import java.util.UUID
 @RequestMapping("/snippets")
 class SnippetController(
     private val snippetService: SnippetService,
+    private val authClient: AuthClient,
     private val lintRequestProducer: LintRequestProducer,
     private val formatRequestProducer: FormatRequestProducer,
 ) {
@@ -56,70 +59,216 @@ class SnippetController(
         return ResponseEntity.ok(snippet)
     }
 
-    @PostMapping
+    @PostMapping("/create")
     fun createSnippet(
+        @AuthenticationPrincipal jwt: Jwt,
         @RequestBody request: SnippetCreateRequest,
-    ): ResponseEntity<Created> {
-        // TODO: When auth-service is implemented, extract userId from JWT token
-        // For now, use UserContext to get the current user ID
-        val created = snippetService.createSnippet(request)
+    ): ResponseEntity<Any> {
+        val userId = jwt.subject
+
+        // Check if user exists in auth service
+        val userExists = authClient.checkUserExists(userId)
+
+        if (!userExists) {
+            return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(mapOf("error" to "User not registered. Please access the application first."))
+        }
+
+        // Generate snippet ID upfront
+        val snippetId = UUID.randomUUID()
+
+        // Register snippet ownership in auth service
+        val registered = authClient.registerSnippet(snippetId, userId)
+
+        if (!registered) {
+            return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(mapOf("error" to "Failed to register snippet ownership"))
+        }
+
+        // Create snippet
+        val created =
+            try {
+                snippetService.createSnippet(request, snippetId)
+            } catch (ex: Exception) {
+                // ROLLBACK: Unregister snippet if creation fails
+                authClient.unregisterSnippet(snippetId, userId)
+                throw ex
+            }
+
         return ResponseEntity.ok(created)
     }
 
     @DeleteMapping("/{id}")
     fun deleteSnippet(
+        @AuthenticationPrincipal jwt: Jwt,
         @PathVariable id: UUID,
     ): ResponseEntity<Void> {
-        // TODO: When auth-service is implemented, extract userId from JWT token
-        // For now, use UserContext to get the current user ID
+        val userId = jwt.subject
+
+        // Check Permission
+        val hasOwnerPermission = authClient.checkPermission(id, userId, "OWNER")
+
+        if (!hasOwnerPermission) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
+        }
+
         snippetService.deleteSnippetById(id)
+        authClient.unregisterSnippet(id, userId)
+
         return ResponseEntity.ok().build()
     }
 
     @PutMapping("/{id}")
     fun updateSnippet(
+        @AuthenticationPrincipal jwt: Jwt,
         @PathVariable id: UUID,
         @RequestBody request: SnippetCreateRequest,
     ): ResponseEntity<SnippetDetailDto> {
-        // TODO: When auth-service is implemented, extract userId from JWT token
-        // For now, use UserContext to get the current user ID
+        val userId = jwt.subject
+
+        val hasOwnerPermission = authClient.checkPermission(id, userId, "OWNER")
+
+        if (!hasOwnerPermission) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
+        }
+
         val updated = snippetService.updateSnippet(id, request)
         return ResponseEntity.ok(updated)
     }
 
     @PostMapping("/{id}/lint")
     fun lintSnippet(
+        @AuthenticationPrincipal jwt: Jwt,
         @PathVariable id: UUID,
     ): ResponseEntity<SnippetDetailDto> {
-        // TODO: When auth-service is implemented, extract userId from JWT token
+        val userId = jwt.subject
+
+        val hasOwnerPermission = authClient.checkPermission(id, userId, "OWNER")
+
+        if (!hasOwnerPermission) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
+        }
+
         // TODO: Produce a message to a queue instead of processing synchronously
-        // For now, use UserContext to get the current user ID
+
         val snippet = snippetService.lintSnippet(id)
         return ResponseEntity.ok(snippet)
     }
 
     @PostMapping("/{id}/format")
     fun formatSnippet(
+        @AuthenticationPrincipal jwt: Jwt,
         @PathVariable id: UUID,
     ): ResponseEntity<SnippetDetailDto> {
-        // TODO: When auth-service is implemented, extract userId from JWT token
+        val userId = jwt.subject
+
+        val hasOwnerPermission = authClient.checkPermission(id, userId, "OWNER")
+
+        if (!hasOwnerPermission) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
+        }
+
         // TODO: Produce a message to a queue instead of processing synchronously
-        // For now, use UserContext to get the current user ID
+
         val snippet = snippetService.formatSnippet(id)
         return ResponseEntity.ok(snippet)
     }
 
-    /**
-     * Gets all snippets owned by the current user.
-     *
-     * @return List of snippets owned by the current user
-     */
     @GetMapping("/my-snippets")
-    fun getMySnippets(): ResponseEntity<List<SnippetSummaryDto>> {
-        // TODO: When auth-service is implemented, extract userId from JWT token
-        // For now, use UserContext to get the current user ID
-        val userId = UserContext.getCurrentUserIdAsString()
-        val snippets = snippetService.getSnippetsByUser(userId)
+    fun getMySnippets(
+        @AuthenticationPrincipal jwt: Jwt,
+    ): ResponseEntity<List<SnippetSummaryDto>> {
+        val userId = jwt.subject
+
+        // Get snippet IDs from auth service FIRST
+        val snippetIds = authClient.getUserAccessibleSnippets(userId)
+
+        // Then get snippet details for each ID
+        val snippets =
+            snippetIds.mapNotNull { snippetId ->
+                try {
+                    snippetService.getSnippetById(snippetId).let { detail ->
+                        SnippetSummaryDto(
+                            id = detail.id,
+                            name = detail.name,
+                            language = detail.language,
+                            version = detail.version,
+                            createdAt = detail.createdAt,
+                            compliance = null,
+                        )
+                    }
+                } catch (ex: Exception) {
+                    null // Skip deleted snippets
+                }
+            }
+
         return ResponseEntity.ok(snippets)
     }
+
+    @GetMapping("/my-owned-snippets")
+    fun getMyOwnedSnippets(
+        @AuthenticationPrincipal jwt: Jwt,
+    ): ResponseEntity<List<SnippetSummaryDto>> {
+        val userId = jwt.subject
+
+        // Get only owned snippet IDs
+        val snippetIds = authClient.getUserOwnedSnippets(userId)
+
+        val snippets =
+            snippetIds.mapNotNull { snippetId ->
+                try {
+                    snippetService.getSnippetById(snippetId).let { detail ->
+                        SnippetSummaryDto(
+                            id = detail.id,
+                            name = detail.name,
+                            language = detail.language,
+                            version = detail.version,
+                            createdAt = detail.createdAt,
+                            compliance = null,
+                        )
+                    }
+                } catch (ex: Exception) {
+                    println("Error loading snippet $snippetId: ${ex.message}")
+                    null
+                }
+            }
+
+        return ResponseEntity.ok(snippets)
+    }
+
+    @GetMapping("/my-read-snippets")
+    fun getMyReadSnippets(
+        @AuthenticationPrincipal jwt: Jwt,
+    ): ResponseEntity<List<SnippetSummaryDto>> {
+        val userId = jwt.subject
+
+        // Get only read-access snippet IDs
+        val snippetIds = authClient.getUserReadSnippets(userId)
+
+        val snippets =
+            snippetIds.mapNotNull { snippetId ->
+                try {
+                    snippetService.getSnippetById(snippetId).let { detail ->
+                        SnippetSummaryDto(
+                            id = detail.id,
+                            name = detail.name,
+                            language = detail.language,
+                            version = detail.version,
+                            createdAt = detail.createdAt,
+                            compliance = null,
+                        )
+                    }
+                } catch (ex: Exception) {
+                    println("Error loading snippet $snippetId: ${ex.message}")
+                    null
+                }
+            }
+
+        return ResponseEntity.ok(snippets)
+    }
+
+    // TODO: add share snippet method.
+    // TODO: Add auth verification
 }

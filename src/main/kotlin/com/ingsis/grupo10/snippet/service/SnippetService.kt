@@ -10,12 +10,10 @@ import com.ingsis.grupo10.snippet.dto.validation.ValidationResult
 import com.ingsis.grupo10.snippet.exception.SnippetValidationException
 import com.ingsis.grupo10.snippet.extension.created
 import com.ingsis.grupo10.snippet.extension.toDetailDto
-import com.ingsis.grupo10.snippet.extension.toSnippet
+import com.ingsis.grupo10.snippet.models.Snippet
 import com.ingsis.grupo10.snippet.repository.LanguageRepository
 import com.ingsis.grupo10.snippet.repository.SnippetRepository
 import com.ingsis.grupo10.snippet.util.AssetUtils.parseCodeUrl
-import com.ingsis.grupo10.snippet.util.UserContext
-import com.ingsis.grupo10.snippet.util.toUuidOrThrow
 import org.springframework.stereotype.Service
 import java.time.LocalDateTime
 import java.util.UUID
@@ -37,6 +35,61 @@ class SnippetService(
                 .orElseThrow { IllegalArgumentException("Snippet not found") }
 
         return snippet.toDetailDto()
+    }
+
+    fun createSnippet(
+        request: SnippetCreateRequest,
+        snippetId: UUID,
+    ): Created {
+        val validationResult =
+            printScriptClient.validateSnippet(
+                code = request.code,
+                version = request.version,
+            )
+
+        when (validationResult) {
+            is ValidationResult.Failed -> {
+                throw SnippetValidationException(
+                    "Syntax error while validating snippet",
+                    validationResult.errors,
+                )
+            }
+
+            ValidationResult.Success -> {
+                val language =
+                    languageRepository.findByName(request.languageName)
+                        ?: throw IllegalArgumentException("Language not supported")
+
+                val assetResult =
+                    assetClient.createAsset(
+                        container = "snippets",
+                        key = snippetId.toString(), // asociamos esta key con el ID del snippet
+                        content = request.code,
+                    )
+
+                // Store as "container/key" format
+                val codeUrl = "snippets/$snippetId"
+
+                // y creamos el snippet con ese ID
+                val snippet =
+                    Snippet(
+                        id = snippetId,
+                        name = request.name,
+                        language = language,
+                        codeUrl = codeUrl,
+                        description = request.description,
+                        version = request.version,
+                        createdAt = LocalDateTime.now(),
+                        updatedAt = LocalDateTime.now(),
+                    )
+
+                val saved = snippetRepository.save(snippet)
+
+                logService.logValidation(saved, emptyList())
+
+                return saved.created()
+            }
+        }
     }
 
     fun getAllSnippets(
@@ -108,78 +161,11 @@ class SnippetService(
         return snippets
     }
 
-    fun createSnippet(
-        request: SnippetCreateRequest,
-        userId: String? = null,
-    ): Created {
-        val validationResult =
-            printScriptClient.validateSnippet(
-                code = request.code,
-                version = request.version,
-            )
-
-        when (validationResult) {
-            is ValidationResult.Failed -> {
-                throw SnippetValidationException(
-                    "Syntax error while validating snippet",
-                    validationResult.errors,
-                )
-            }
-
-            ValidationResult.Success -> {
-                val language =
-                    languageRepository.findByName(request.languageName)
-                        ?: throw IllegalArgumentException("Language not supported")
-
-                // Use provided userId or get current user from context
-                val ownerUuid =
-                    if (userId != null) {
-                        UserContext.toUuidOrThrow(userId, "Invalid userId format")
-                    } else {
-                        UserContext.getCurrentUserId()
-                    }
-
-                // Create asset into the bucket
-                val snippetId = UUID.randomUUID()
-
-                val assetResult =
-                    assetClient.createAsset(
-                        container = "snippets",
-                        key = snippetId.toString(), // asociamos esta key con el ID del snippet
-                        content = request.code,
-                    )
-
-                // Store as "container/key" format
-                val codeUrl = "snippets/$snippetId"
-
-                // y creamos el snippet con ese ID
-                val snippet = request.toSnippet(language, ownerUuid, codeUrl, snippetId)
-
-                val saved = snippetRepository.save(snippet)
-
-                logService.logValidation(saved, emptyList())
-
-                return saved.created()
-            }
-        }
-    }
-
-    fun deleteSnippetById(
-        id: UUID,
-        userId: String? = null,
-    ) {
+    fun deleteSnippetById(id: UUID) {
         val snippet =
             snippetRepository
                 .findById(id)
                 .orElseThrow { IllegalArgumentException("Snippet not found") }
-
-        // Validate user ownership if userId is provided
-        if (userId != null) {
-            val userUuid = UserContext.toUuidOrThrow(userId, "Invalid userId format")
-            if (snippet.ownerId != userUuid) {
-                throw IllegalArgumentException("User does not have permission to delete this snippet")
-            }
-        }
 
         snippetRepository.deleteById(id)
     }
@@ -187,20 +173,11 @@ class SnippetService(
     fun updateSnippet(
         id: UUID,
         request: SnippetCreateRequest,
-        userId: String? = null,
     ): SnippetDetailDto {
         val existingSnippet =
             snippetRepository
                 .findById(id)
                 .orElseThrow { IllegalArgumentException("Snippet not found") }
-
-        // Validate user ownership if userId is provided
-        if (userId != null) {
-            val userUuid = UserContext.toUuidOrThrow(userId, "Invalid userId format")
-            if (existingSnippet.ownerId != userUuid) {
-                throw IllegalArgumentException("User does not have permission to update this snippet")
-            }
-        }
 
         val validationResult =
             printScriptClient.validateSnippet(
@@ -223,23 +200,22 @@ class SnippetService(
 
                 val (container, key) = parseCodeUrl(existingSnippet.codeUrl)
 
-                // Update asset in the bucket
                 assetClient.createAsset(
                     container = container,
                     key = key,
-                    content = request.code, // newCode content
+                    content = request.code,
                 )
 
-                // Keep the same codeUrl format "container/key"
                 val updatedSnippet =
-                    existingSnippet.copy(
+                    Snippet(
+                        id = existingSnippet.id,
                         name = request.name,
                         description = request.description,
-                        codeUrl = existingSnippet.codeUrl, // Keep same codeUrl since container/key don't change
+                        codeUrl = existingSnippet.codeUrl,
                         language = language,
                         version = request.version,
+                        createdAt = existingSnippet.createdAt,
                         updatedAt = LocalDateTime.now(),
-                        ownerId = existingSnippet.ownerId, // Keep existing ownerId for update
                     )
 
                 val saved = snippetRepository.save(updatedSnippet)
@@ -251,19 +227,15 @@ class SnippetService(
         }
     }
 
-    fun lintSnippet(
-        id: UUID,
-        userId: UUID? = null,
-    ): SnippetDetailDto {
+    fun lintSnippet(id: UUID): SnippetDetailDto {
         val snippet =
             snippetRepository
                 .findById(id)
                 .orElseThrow { IllegalArgumentException("Snippet not found") }
 
-        // Use provided userId or get current user from context
-        val userUuid = userId ?: UserContext.getCurrentUserId()
-
-        val lintConfig = lintConfigService.getConfigJson(userUuid)
+        // TODO: Get user-specific lint config - for now use default
+        val lintConfig = "{}" // Default config
+//        val lintConfig = lintConfigService.getConfigJson(userUuid)
 
         val (container, key) = parseCodeUrl(snippet.codeUrl)
 
@@ -281,19 +253,15 @@ class SnippetService(
         return snippet.toDetailDto()
     }
 
-    fun formatSnippet(
-        id: UUID,
-        userId: UUID? = null,
-    ): SnippetDetailDto {
+    fun formatSnippet(id: UUID): SnippetDetailDto {
         val snippet =
             snippetRepository
                 .findById(id)
                 .orElseThrow { IllegalArgumentException("Snippet not found") }
 
-        // Use provided userId or get current user from context
-        val userUuid = userId ?: UserContext.getCurrentUserId()
-
-        val formatConfig = formatConfigService.getConfigJson(userUuid)
+        // TODO: Get user-specific format config - for now use default
+        val formatConfig = "{}" // Default config
+//        val formatConfig = formatConfigService.getConfigJson(userUuid)
 
         val (container, key) = parseCodeUrl(snippet.codeUrl)
 
@@ -311,26 +279,27 @@ class SnippetService(
         return snippet.toDetailDto()
     }
 
-    /**
-     * Gets all snippets owned by a specific user.
-     *
-     * @param userId The user ID to filter snippets by
-     * @return List of snippets owned by the user
-     */
-    fun getSnippetsByUser(userId: String): List<SnippetSummaryDto> {
-        val userUuid = UserContext.toUuidOrThrow(userId, "Invalid userId format")
-        val userSnippets = snippetRepository.findByOwnerId(userUuid)
+//    /**
+//     * Gets all snippets owned by a specific user.
+//     *
+//     * @param userId The user ID to filter snippets by
+//     * @return List of snippets owned by the user
+//     */
+// This now gets snippets by querying auth service for user's accessible snippets
 
-        return userSnippets.map { snippet ->
-            val lintStatus = logService.getLatestLintStatus(snippet.id)
-            SnippetSummaryDto(
-                id = snippet.id,
-                name = snippet.name,
-                language = snippet.language.name,
-                version = snippet.version,
-                createdAt = snippet.createdAt,
-                compliance = lintStatus.status,
-            )
-        }
-    }
+//    fun getSnippetsByUser(userId: String): List<SnippetSummaryDto> {
+//        val userSnippets = snippetRepository.findByOwnerId(userId)
+//
+//        return userSnippets.map { snippet ->
+//            val lintStatus = logService.getLatestLintStatus(snippet.id)
+//            SnippetSummaryDto(
+//                id = snippet.id,
+//                name = snippet.name,
+//                language = snippet.language.name,
+//                version = snippet.version,
+//                createdAt = snippet.createdAt,
+//                compliance = lintStatus.status,
+//            )
+//        }
+//    }
 }

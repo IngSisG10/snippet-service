@@ -7,5 +7,5 @@ import java.util.UUID
 
 @Repository
 interface FormatConfigRepository : JpaRepository<FormatConfig, UUID> {
-    fun findByUserId(userId: UUID): FormatConfig?
+    fun findByUserId(userId: String): FormatConfig?
 }

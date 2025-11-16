@@ -12,7 +12,7 @@ data class LintConfig(
     @Id
     val id: UUID = UUID.randomUUID(),
     @Column(nullable = false)
-    val userId: UUID,
+    val userId: String,
     @Column(nullable = false, columnDefinition = "TEXT")
     val config: String, // JSON string with linting rules
 )
