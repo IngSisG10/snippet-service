@@ -13,7 +13,7 @@ class FormatConfigService(
     private val formatConfigRepository: FormatConfigRepository,
     private val objectMapper: ObjectMapper,
 ) {
-    fun getConfig(userId: UUID): FormatConfigResponse {
+    fun getConfig(userId: String): FormatConfigResponse {
         val config =
             formatConfigRepository.findByUserId(userId)
                 ?: createDefaultConfig(userId)
@@ -22,7 +22,7 @@ class FormatConfigService(
     }
 
     fun updateConfig(
-        userId: UUID,
+        userId: String,
         request: FormatConfigRequest,
     ): FormatConfigResponse {
         val existingConfig = formatConfigRepository.findByUserId(userId)
@@ -49,7 +49,7 @@ class FormatConfigService(
         return parseConfigToResponse(config)
     }
 
-    fun getConfigJson(userId: UUID): String {
+    fun getConfigJson(userId: String): String {
         val config =
             formatConfigRepository.findByUserId(userId)
                 ?: createDefaultConfig(userId)
@@ -57,7 +57,7 @@ class FormatConfigService(
         return config.config
     }
 
-    private fun createDefaultConfig(userId: UUID): FormatConfig {
+    private fun createDefaultConfig(userId: String): FormatConfig {
         val defaultJson =
             """
             {
