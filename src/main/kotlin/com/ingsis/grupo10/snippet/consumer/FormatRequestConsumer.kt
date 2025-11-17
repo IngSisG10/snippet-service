@@ -36,15 +36,13 @@ class FormatRequestConsumer
             println("Processing FORMAT request")
             println("Stream: ${record.stream}, Record ID: ${record.id}")
             println("Snippet ID: ${request.snippetId}")
-            println("User ID: ${request.userId}")
             println("========================================")
 
             try {
                 val snippetId = UUID.fromString(request.snippetId)
-                val userId = UUID.fromString(request.userId)
 
                 // Llamar al servicio existente que hace el formateo
-                snippetService.formatSnippet(snippetId, userId)
+                snippetService.formatSnippet(snippetId)
 
                 println("Format request processed successfully for snippet: ${request.snippetId}")
             } catch (e: Exception) {

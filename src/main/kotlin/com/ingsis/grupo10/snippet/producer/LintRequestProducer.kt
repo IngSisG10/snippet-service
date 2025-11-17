@@ -8,10 +8,7 @@ import org.springframework.data.redis.core.RedisTemplate
 import org.springframework.stereotype.Component
 
 interface LintRequestProducer {
-    fun publishLintRequest(
-        snippetId: String,
-        userId: String,
-    )
+    fun publishLintRequest(snippetId: String)
 }
 
 @Component
@@ -22,12 +19,9 @@ class RedisLintRequestProducer
         redis: RedisTemplate<String, String>,
     ) : RedisStreamProducer(streamKey, redis),
         LintRequestProducer {
-        override fun publishLintRequest(
-            snippetId: String,
-            userId: String,
-        ) {
+        override fun publishLintRequest(snippetId: String) {
             println("Publishing lint request for snippet: $snippetId")
-            val request = LintRequest(snippetId, userId)
+            val request = LintRequest(snippetId)
             emit(request)
         }
     }

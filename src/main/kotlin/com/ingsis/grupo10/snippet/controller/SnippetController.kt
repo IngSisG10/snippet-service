@@ -142,7 +142,7 @@ class SnippetController(
     fun lintSnippet(
         @AuthenticationPrincipal jwt: Jwt,
         @PathVariable id: UUID,
-    ): ResponseEntity<SnippetDetailDto> {
+    ): ResponseEntity<Map<String, String>> {
         val userId = jwt.subject
 
         val hasOwnerPermission = authClient.checkPermission(id, userId, "OWNER")
@@ -151,17 +151,19 @@ class SnippetController(
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
         }
 
-        // TODO: Produce a message to a queue instead of processing synchronously
+        // Publicar mensaje al Redis Stream
+        lintRequestProducer.publishLintRequest(id.toString())
 
-        val snippet = snippetService.lintSnippet(id)
-        return ResponseEntity.ok(snippet)
+        return ResponseEntity
+            .status(HttpStatus.ACCEPTED)
+            .body(mapOf("message" to "Lint request queued for processing"))
     }
 
     @PostMapping("/{id}/format")
     fun formatSnippet(
         @AuthenticationPrincipal jwt: Jwt,
         @PathVariable id: UUID,
-    ): ResponseEntity<SnippetDetailDto> {
+    ): ResponseEntity<Map<String, String>> {
         val userId = jwt.subject
 
         val hasOwnerPermission = authClient.checkPermission(id, userId, "OWNER")
@@ -170,10 +172,12 @@ class SnippetController(
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
         }
 
-        // TODO: Produce a message to a queue instead of processing synchronously
+        // Publicar mensaje al Redis Stream
+        formatRequestProducer.publishFormatRequest(id.toString())
 
-        val snippet = snippetService.formatSnippet(id)
-        return ResponseEntity.ok(snippet)
+        return ResponseEntity
+            .status(HttpStatus.ACCEPTED)
+            .body(mapOf("message" to "Format request queued for processing"))
     }
 
     @GetMapping("/my-snippets")

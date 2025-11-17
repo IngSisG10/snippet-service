@@ -15,6 +15,7 @@ import com.ingsis.grupo10.snippet.repository.LanguageRepository
 import com.ingsis.grupo10.snippet.repository.SnippetRepository
 import com.ingsis.grupo10.snippet.util.AssetUtils.parseCodeUrl
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
 import java.util.UUID
 
@@ -227,6 +228,7 @@ class SnippetService(
         }
     }
 
+    @Transactional
     fun lintSnippet(id: UUID): SnippetDetailDto {
         val snippet =
             snippetRepository
@@ -253,6 +255,7 @@ class SnippetService(
         return snippet.toDetailDto()
     }
 
+    @Transactional
     fun formatSnippet(id: UUID): SnippetDetailDto {
         val snippet =
             snippetRepository
@@ -260,7 +263,7 @@ class SnippetService(
                 .orElseThrow { IllegalArgumentException("Snippet not found") }
 
         // TODO: Get user-specific format config - for now use default
-        val formatConfig = "{}" // Default config
+        val formatConfig = """{"enforce-spacing-around-equals": true}"""
 //        val formatConfig = formatConfigService.getConfigJson(userUuid)
 
         val (container, key) = parseCodeUrl(snippet.codeUrl)
@@ -273,6 +276,9 @@ class SnippetService(
                 version = snippet.version,
                 formatConfig = formatConfig,
             )
+
+        // Update the asset with formatted code
+        assetClient.createAsset(container, key, formatResult.formattedCode)
 
         logService.logFormatting(snippet, formatResult.formattedCode, formatConfig)
 

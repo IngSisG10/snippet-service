@@ -19,9 +19,12 @@ services:
       AUTH0_AUDIENCE: https://my-api-identifier
       CORS_ALLOWED_ORIGINS: http://localhost:3000,http://localhost:5173
       SERVICE_API_KEY: ${SERVICE_API_KEY}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     depends_on:
       - db
       - asset-service
+      - redis
     networks:
       - shared_network
 
@@ -67,9 +70,61 @@ services:
     networks:
       - shared_network
 
+  redis:
+    image: redis:7-alpine
+    container_name: snippet-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - shared_network
+
+  auth-service:
+    build:
+      context: ../auth-service
+      dockerfile: Dockerfile
+    container_name: auth-service
+    ports:
+      - "8083:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://auth-db:5432/authdb
+      SPRING_DATASOURCE_USERNAME: authuser
+      SPRING_DATASOURCE_PASSWORD: authpass
+      AUTH0_AUDIENCE: https://my-api-identifier
+      AUTH_SERVER_URI: dev-rhvn1b43rtt1hdap.us.auth0.com/
+      SERVICE_API_KEY: ${SERVICE_API_KEY}
+    depends_on:
+      - auth-db
+    networks:
+      - shared_network
+
+  auth-db:
+    image: postgres:15
+    container_name: auth-db
+    environment:
+      POSTGRES_USER: authuser
+      POSTGRES_PASSWORD: authpass
+      POSTGRES_DB: authdb
+    ports:
+      - "5434:5432"
+    volumes:
+      - auth-data:/var/lib/postgresql/data
+    networks:
+      - shared_network
+
+  printscript-service:
+    build:
+      context: ../printscript-service
+      dockerfile: Dockerfile.local
+    container_name: printscript-service
+    ports:
+      - "8080:8080"
+    networks:
+      - shared_network
+
 volumes:
   snippet-data:
   blob:
+  auth-data:
 
 networks:
   shared_network:

@@ -8,10 +8,7 @@ import org.springframework.data.redis.core.RedisTemplate
 import org.springframework.stereotype.Component
 
 interface FormatRequestProducer {
-    fun publishFormatRequest(
-        snippetId: String,
-        userId: String,
-    )
+    fun publishFormatRequest(snippetId: String)
 }
 
 @Component
@@ -22,12 +19,9 @@ class RedisFormatRequestProducer
         redis: RedisTemplate<String, String>,
     ) : RedisStreamProducer(streamKey, redis),
         FormatRequestProducer {
-        override fun publishFormatRequest(
-            snippetId: String,
-            userId: String,
-        ) {
+        override fun publishFormatRequest(snippetId: String) {
             println("Publishing format request for snippet: $snippetId")
-            val request = FormatRequest(snippetId, userId)
+            val request = FormatRequest(snippetId)
             emit(request)
         }
     }

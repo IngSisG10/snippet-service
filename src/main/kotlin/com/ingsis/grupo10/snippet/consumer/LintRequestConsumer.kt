@@ -36,16 +36,11 @@ class LintRequestConsumer
             println("Processing LINT request")
             println("Stream: ${record.stream}, Record ID: ${record.id}")
             println("Snippet ID: ${request.snippetId}")
-            println("User ID: ${request.userId}")
             println("========================================")
 
             try {
                 val snippetId = UUID.fromString(request.snippetId)
-                val userId = UUID.fromString(request.userId)
-
-                // Llamar al servicio existente que hace el linting
-                snippetService.lintSnippet(snippetId, userId)
-
+                snippetService.lintSnippet(snippetId)
                 println("Lint request processed successfully for snippet: ${request.snippetId}")
             } catch (e: Exception) {
                 println("Error processing lint request: ${e.message}")

@@ -100,6 +100,9 @@ class PrintScriptClient(
         val tempFilePath = createTempFile(prefix = "snippet", suffix = ".ps")
         tempFilePath.writeText(code)
 
+        val tempConfigPath = createTempFile(prefix = "lint-config", suffix = ".json")
+        tempConfigPath.writeText(lintConfig)
+
         try {
             val response =
                 webClient
@@ -110,7 +113,7 @@ class PrintScriptClient(
                         BodyInserters
                             .fromMultipartData("snippet", FileSystemResource(tempFilePath.toFile()))
                             .with("version", version)
-                            .with("config", lintConfig),
+                            .with("config", FileSystemResource(tempConfigPath.toFile())),
                     ).retrieve()
                     .bodyToMono(LintResultDTO::class.java)
                     .block() ?: throw RuntimeException("No response from PrintScript service")
@@ -118,6 +121,7 @@ class PrintScriptClient(
             return response
         } finally {
             tempFilePath.deleteExisting()
+            tempConfigPath.deleteExisting()
         }
     }
 
@@ -129,8 +133,11 @@ class PrintScriptClient(
         val tempFilePath = createTempFile(prefix = "snippet", suffix = ".ps")
         tempFilePath.writeText(code)
 
+        val tempConfigPath = createTempFile(prefix = "format-config", suffix = ".json")
+        tempConfigPath.writeText(formatConfig)
+
         try {
-            val response =
+            val formattedCode =
                 webClient
                     .post()
                     .uri("/api/printscript/format")
@@ -139,14 +146,15 @@ class PrintScriptClient(
                         BodyInserters
                             .fromMultipartData("snippet", FileSystemResource(tempFilePath.toFile()))
                             .with("version", version)
-                            .with("config", formatConfig),
+                            .with("config", FileSystemResource(tempConfigPath.toFile())),
                     ).retrieve()
-                    .bodyToMono(FormatResultDTO::class.java)
+                    .bodyToMono(String::class.java)
                     .block() ?: throw RuntimeException("No response from PrintScript service")
 
-            return response
+            return FormatResultDTO(formattedCode)
         } finally {
             tempFilePath.deleteExisting()
+            tempConfigPath.deleteExisting()
         }
     }
 }
