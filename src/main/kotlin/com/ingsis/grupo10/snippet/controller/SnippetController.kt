@@ -4,7 +4,7 @@ import com.ingsis.grupo10.snippet.client.AuthClient
 import com.ingsis.grupo10.snippet.dto.SnippetCreateRequest
 import com.ingsis.grupo10.snippet.dto.SnippetDetailDto
 import com.ingsis.grupo10.snippet.dto.SnippetSummaryDto
-import com.ingsis.grupo10.snippet.dto.filetype.FileTypeDto
+import com.ingsis.grupo10.snippet.dto.filetype.FileTypeResponse
 import com.ingsis.grupo10.snippet.dto.rules.RuleDto
 import com.ingsis.grupo10.snippet.producer.FormatRequestProducer
 import com.ingsis.grupo10.snippet.producer.LintRequestProducer
@@ -339,7 +339,7 @@ class SnippetController(
 
     // File types
     @GetMapping("/filetypes")
-    fun getSupportedFileTypes(): ResponseEntity<FileTypeDto> {
+    fun getSupportedFileTypes(): ResponseEntity<List<FileTypeResponse>> {
         val fileTypes = snippetService.getSupportedFileTypes()
         return ResponseEntity.ok(fileTypes)
     }
