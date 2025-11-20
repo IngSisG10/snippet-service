@@ -1,11 +1,16 @@
 package com.ingsis.grupo10.snippet.service
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.ingsis.grupo10.snippet.client.AssetClient
 import com.ingsis.grupo10.snippet.client.PrintScriptClient
 import com.ingsis.grupo10.snippet.dto.Created
 import com.ingsis.grupo10.snippet.dto.SnippetCreateRequest
 import com.ingsis.grupo10.snippet.dto.SnippetDetailDto
 import com.ingsis.grupo10.snippet.dto.SnippetSummaryDto
+import com.ingsis.grupo10.snippet.dto.filetype.FileTypeDto
+import com.ingsis.grupo10.snippet.dto.formatconfig.FormatConfigRequest
+import com.ingsis.grupo10.snippet.dto.lintconfig.LintConfigRequest
+import com.ingsis.grupo10.snippet.dto.rules.RuleDto
 import com.ingsis.grupo10.snippet.dto.validation.ValidationResult
 import com.ingsis.grupo10.snippet.exception.SnippetValidationException
 import com.ingsis.grupo10.snippet.extension.created
@@ -28,6 +33,7 @@ class SnippetService(
     private val logService: LogService,
     private val lintConfigService: LintConfigService,
     private val formatConfigService: FormatConfigService,
+    private val objectMapper: ObjectMapper,
 ) {
     fun getSnippetById(id: UUID): SnippetDetailDto {
         val snippet =
@@ -308,4 +314,101 @@ class SnippetService(
 //            )
 //        }
 //    }
+
+    // Rules
+    fun getFormattingRules(userId: String): List<RuleDto> {
+        val json = formatConfigService.getConfigJson(userId)
+        val map = objectMapper.readValue(json, Map::class.java) as Map<String, Any?>
+
+        return mapToRuleList(map)
+    }
+
+    fun getLintingRules(userId: String): List<RuleDto> {
+        val json = lintConfigService.getConfigJson(userId)
+        val map = objectMapper.readValue(json, Map::class.java) as Map<String, Any?>
+        return mapToRuleList(map)
+    }
+
+    fun updateFormattingRules(
+        rules: List<RuleDto>,
+        userId: String,
+    ) {
+        val request = rulesToFormatConfigRequest(rules)
+        formatConfigService.updateConfig(userId, request)
+    }
+
+    fun updateLintingRules(
+        rules: Map<String, Any>,
+        userId: String,
+    ) {
+        val request = rulesToLintConfigRequest(rules)
+        lintConfigService.updateConfig(userId, request)
+    }
+
+    // Helpers
+    // todo: tiralo en helpers
+    private fun mapToRuleList(config: Map<String, Any?>): List<RuleDto> =
+        config.map { (key, value) ->
+            RuleDto(
+                id = key,
+                name = formatKeyToHumanName(key),
+                isActive = true, // fixme: Why? -> siempre activas por ahora
+                value = value,
+            )
+        }
+
+    private fun formatKeyToHumanName(key: String): String = key.split("_").joinToString(" ") { it.replaceFirstChar(Char::uppercase) }
+
+    private fun rulesToFormatConfigRequest(rules: List<RuleDto>): FormatConfigRequest {
+        var spaceBeforeColon: Boolean? = null
+        var spaceAfterColon: Boolean? = null
+        var spaceAroundEquals: Boolean? = null
+        var newlineBeforePrintln: Int? = null
+        var indentInsideBlock: Int? = null
+
+        rules.forEach { rule ->
+            when (rule.id) {
+                "space_before_colon" -> spaceBeforeColon = rule.value as? Boolean
+                "space_after_colon" -> spaceAfterColon = rule.value as? Boolean
+                "space_around_equals" -> spaceAroundEquals = rule.value as? Boolean
+                "newline_before_println" -> newlineBeforePrintln = (rule.value as? Number)?.toInt()
+                "indent_inside_block" -> indentInsideBlock = (rule.value as? Number)?.toInt()
+            }
+        }
+
+        return FormatConfigRequest(
+            spaceBeforeColon = spaceBeforeColon,
+            spaceAfterColon = spaceAfterColon,
+            spaceAroundEquals = spaceAroundEquals,
+            newlineBeforePrintln = newlineBeforePrintln,
+            indentInsideBlock = indentInsideBlock,
+        )
+    }
+
+    private fun rulesToLintConfigRequest(rules: Map<String, Any>): LintConfigRequest =
+        LintConfigRequest(
+            identifierFormat = rules["identifierFormat"] as? String,
+            printlnExpressionAllowed = rules["printlnExpressionAllowed"] as? Boolean,
+            readInputExpressionAllowed = rules["readInputExpressionAllowed"] as? Boolean,
+        )
+
+    // Test Cases
+    fun getTestCases(): Map<String, Any> {
+        TODO()
+    }
+
+    fun postTestCase(testCase: Map<String, Any>) {
+        TODO()
+    }
+
+    fun removeTestCase(testCaseId: UUID) {
+        TODO()
+    }
+
+    // File Types
+    fun getSupportedFileTypes(): FileTypeDto {
+        val languageRepository = languageRepository.findAll()
+        val fileTypes = languageRepository.map { it.name }
+        return FileTypeDto(fileTypes)
+    }
 }

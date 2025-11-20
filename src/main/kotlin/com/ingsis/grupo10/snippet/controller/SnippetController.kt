@@ -4,6 +4,8 @@ import com.ingsis.grupo10.snippet.client.AuthClient
 import com.ingsis.grupo10.snippet.dto.SnippetCreateRequest
 import com.ingsis.grupo10.snippet.dto.SnippetDetailDto
 import com.ingsis.grupo10.snippet.dto.SnippetSummaryDto
+import com.ingsis.grupo10.snippet.dto.filetype.FileTypeDto
+import com.ingsis.grupo10.snippet.dto.rules.RuleDto
 import com.ingsis.grupo10.snippet.producer.FormatRequestProducer
 import com.ingsis.grupo10.snippet.producer.LintRequestProducer
 import com.ingsis.grupo10.snippet.service.SnippetService
@@ -30,8 +32,6 @@ class SnippetController(
     private val lintRequestProducer: LintRequestProducer,
     private val formatRequestProducer: FormatRequestProducer,
 ) {
-    // todo: file: Blob Storage
-
     // getAll de toda la DB? No tiene sentido, deberia ser por el owner, o los shared.
     @GetMapping
     fun getAllSnippets(
@@ -275,4 +275,72 @@ class SnippetController(
 
     // TODO: add share snippet method.
     // TODO: Add auth verification
+
+    // Rules
+    @GetMapping("/rules/format")
+    fun getFormattingRules(
+        @AuthenticationPrincipal jwt: Jwt,
+    ): ResponseEntity<List<RuleDto>> {
+        val userId = jwt.subject
+        val rules = snippetService.getFormattingRules(userId)
+        return ResponseEntity.ok(rules)
+    }
+
+    @GetMapping("/rules/lint")
+    fun getLintingRules(
+        @AuthenticationPrincipal jwt: Jwt,
+    ): ResponseEntity<List<RuleDto>> {
+        val userId = jwt.subject
+        val rules = snippetService.getLintingRules(userId)
+        return ResponseEntity.ok(rules)
+    }
+
+    @PutMapping("/rules/format")
+    fun updateFormattingRules(
+        @RequestBody rules: List<RuleDto>,
+        @AuthenticationPrincipal jwt: Jwt,
+    ): ResponseEntity<Void> {
+        snippetService.updateFormattingRules(rules, jwt.subject)
+        return ResponseEntity.ok().build()
+    }
+
+    @PutMapping("/rules/lint")
+    fun updateLintingRules(
+        @RequestBody rules: Map<String, Any>,
+        @AuthenticationPrincipal jwt: Jwt,
+    ): ResponseEntity<Void> {
+        snippetService.updateLintingRules(rules, jwt.subject)
+        return ResponseEntity.ok().build()
+    }
+
+    // todo: Test Cases
+
+    @GetMapping("/testcases")
+    fun getTestCases(): ResponseEntity<Map<String, Any>> {
+        val testCases = snippetService.getTestCases()
+        return ResponseEntity.ok(testCases)
+    }
+
+    @PostMapping("/testcases")
+    fun postTestCase(
+        @RequestBody testCases: Map<String, Any>,
+    ): ResponseEntity<Void> {
+        snippetService.postTestCase(testCases)
+        return ResponseEntity.ok().build()
+    }
+
+    @DeleteMapping("/testcases/{id}")
+    fun removeTestCase(
+        @PathVariable id: UUID,
+    ): ResponseEntity<Void> {
+        snippetService.removeTestCase(id)
+        return ResponseEntity.ok().build()
+    }
+
+    // File types
+    @GetMapping("/filetypes")
+    fun getSupportedFileTypes(): ResponseEntity<FileTypeDto> {
+        val fileTypes = snippetService.getSupportedFileTypes()
+        return ResponseEntity.ok(fileTypes)
+    }
 }
