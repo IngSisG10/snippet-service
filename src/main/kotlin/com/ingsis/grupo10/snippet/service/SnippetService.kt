@@ -392,7 +392,7 @@ class SnippetService(
             readInputExpressionAllowed = rules["readInputExpressionAllowed"] as? Boolean,
         )
 
-    // Test Cases
+    // todo: Test Cases
     fun getTestCases(): Map<String, Any> {
         TODO()
     }
@@ -405,7 +405,7 @@ class SnippetService(
         TODO()
     }
 
-    // File Types
+    // fixme: File Types
     fun getSupportedFileTypes(): FileTypeDto {
         val languageRepository = languageRepository.findAll()
         val fileTypes = languageRepository.map { it.name }
