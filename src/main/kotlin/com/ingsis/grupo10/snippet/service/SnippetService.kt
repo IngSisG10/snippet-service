@@ -7,7 +7,7 @@ import com.ingsis.grupo10.snippet.dto.Created
 import com.ingsis.grupo10.snippet.dto.SnippetCreateRequest
 import com.ingsis.grupo10.snippet.dto.SnippetDetailDto
 import com.ingsis.grupo10.snippet.dto.SnippetSummaryDto
-import com.ingsis.grupo10.snippet.dto.filetype.FileTypeDto
+import com.ingsis.grupo10.snippet.dto.filetype.FileTypeResponse
 import com.ingsis.grupo10.snippet.dto.formatconfig.FormatConfigRequest
 import com.ingsis.grupo10.snippet.dto.lintconfig.LintConfigRequest
 import com.ingsis.grupo10.snippet.dto.rules.RuleDto
@@ -406,9 +406,11 @@ class SnippetService(
     }
 
     // fixme: File Types
-    fun getSupportedFileTypes(): FileTypeDto {
-        val languageRepository = languageRepository.findAll()
-        val fileTypes = languageRepository.map { it.name }
-        return FileTypeDto(fileTypes)
-    }
+    fun getSupportedFileTypes(): List<FileTypeResponse> =
+        languageRepository.findAll().map {
+            FileTypeResponse(
+                language = it.name,
+                extension = "ps", // Hardcoded for now FIXME!
+            )
+        }
 }
