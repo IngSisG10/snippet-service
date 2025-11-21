@@ -37,13 +37,13 @@ class LintConfigControllerTest {
         val response =
             LintConfigResponse(
                 id = UUID.randomUUID(),
-                userId = testUserId,
+                userId = testUserId.toString(),
                 identifierFormat = "camel case",
                 printlnExpressionAllowed = true,
                 readInputExpressionAllowed = true,
             )
 
-        `when`(lintConfigService.getConfig(testUserId)).thenReturn(response)
+        `when`(lintConfigService.getConfig(testUserId.toString())).thenReturn(response)
 
         mockMvc
             .perform(get("/config/linting"))
@@ -64,7 +64,7 @@ class LintConfigControllerTest {
         val response =
             LintConfigResponse(
                 id = UUID.randomUUID(),
-                userId = testUserId,
+                userId = testUserId.toString(),
                 identifierFormat = "snake case",
                 printlnExpressionAllowed = false,
                 readInputExpressionAllowed = true,

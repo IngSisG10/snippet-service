@@ -7,9 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository
 import java.util.UUID
 
 interface SnippetRepository : JpaRepository<Snippet, UUID> {
-    //    fun findByOwnerId(ownerId: String): List<Snippet>
-    fun findByUserIdAndNameContainingIgnoreCase(
-        userId: String,
+    fun findByNameContainingIgnoreCase(
         name: String,
         pageable: Pageable,
     ): Page<Snippet>

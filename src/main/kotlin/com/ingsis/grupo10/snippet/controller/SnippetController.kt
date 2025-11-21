@@ -4,6 +4,7 @@ import com.ingsis.grupo10.snippet.client.AuthClient
 import com.ingsis.grupo10.snippet.dto.SnippetCreateRequest
 import com.ingsis.grupo10.snippet.dto.SnippetDetailDto
 import com.ingsis.grupo10.snippet.dto.SnippetSummaryDto
+import com.ingsis.grupo10.snippet.dto.SnippetUICreateRequest
 import com.ingsis.grupo10.snippet.dto.filetype.FileTypeResponse
 import com.ingsis.grupo10.snippet.dto.paginatedsnippets.PaginatedSnippetsResponse
 import com.ingsis.grupo10.snippet.dto.rules.RuleDto
@@ -44,6 +45,8 @@ class SnippetController(
         @AuthenticationPrincipal jwt: Jwt,
     ): ResponseEntity<PaginatedSnippetsResponse> {
         val userId = jwt.subject
+        /*val namespace = "https://your-app.com"
+        val name = jwt.getClaim<String>("$namespace/name") ?: name*/
 
         val result =
             snippetService.listSnippetDescriptors(
@@ -86,7 +89,7 @@ class SnippetController(
     @PostMapping("/create")
     fun createSnippet(
         @AuthenticationPrincipal jwt: Jwt,
-        @RequestBody request: SnippetCreateRequest,
+        @RequestBody request: SnippetUICreateRequest,
     ): ResponseEntity<Any> {
         val userId = jwt.subject
 

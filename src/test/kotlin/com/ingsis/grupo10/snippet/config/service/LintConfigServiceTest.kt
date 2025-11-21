@@ -38,31 +38,31 @@ class LintConfigServiceTest {
         val config =
             LintConfig(
                 id = UUID.randomUUID(),
-                userId = testUserId,
+                userId = testUserId.toString(),
                 config = """{"identifier_format":"camel case"}""",
             )
 
-        `when`(lintConfigRepository.findByUserId(testUserId)).thenReturn(config)
+        `when`(lintConfigRepository.findByUserId(testUserId.toString())).thenReturn(config)
 
-        val result = lintConfigService.getConfig(testUserId)
+        val result = lintConfigService.getConfig(testUserId.toString())
 
         assertNotNull(result)
-        assertEquals(testUserId, result.userId)
+        assertEquals(testUserId.toString(), result.userId)
         assertEquals("camel case", result.identifierFormat)
-        verify(lintConfigRepository, times(1)).findByUserId(testUserId)
+        verify(lintConfigRepository, times(1)).findByUserId(testUserId.toString())
     }
 
     @Test
     fun `should create default config when user has no config`() {
-        `when`(lintConfigRepository.findByUserId(testUserId)).thenReturn(null)
+        `when`(lintConfigRepository.findByUserId(testUserId.toString())).thenReturn(null)
         `when`(lintConfigRepository.save(any(LintConfig::class.java))).thenAnswer { it.arguments[0] }
 
-        val result = lintConfigService.getConfig(testUserId)
+        val result = lintConfigService.getConfig(testUserId.toString())
 
         assertNotNull(result)
-        assertEquals(testUserId, result.userId)
+        assertEquals(testUserId.toString(), result.userId)
         assertEquals("camel case", result.identifierFormat)
-        verify(lintConfigRepository, times(1)).findByUserId(testUserId)
+        verify(lintConfigRepository, times(1)).findByUserId(testUserId.toString())
         verify(lintConfigRepository, times(1)).save(any(LintConfig::class.java))
     }
 
@@ -71,7 +71,7 @@ class LintConfigServiceTest {
         val existingConfig =
             LintConfig(
                 id = UUID.randomUUID(),
-                userId = testUserId,
+                userId = testUserId.toString(),
                 config = """{"identifier_format":"camel case"}""",
             )
 
@@ -82,13 +82,13 @@ class LintConfigServiceTest {
                 readInputExpressionAllowed = false,
             )
 
-        `when`(lintConfigRepository.findByUserId(testUserId)).thenReturn(existingConfig)
+        `when`(lintConfigRepository.findByUserId(testUserId.toString())).thenReturn(existingConfig)
         `when`(lintConfigRepository.save(any(LintConfig::class.java))).thenAnswer { it.arguments[0] }
 
-        val result = lintConfigService.updateConfig(testUserId, request)
+        val result = lintConfigService.updateConfig(testUserId.toString(), request)
 
         assertNotNull(result)
-        assertEquals(testUserId, result.userId)
+        assertEquals(testUserId.toString(), result.userId)
         assertEquals("snake case", result.identifierFormat)
         assertEquals(true, result.printlnExpressionAllowed)
         assertEquals(false, result.readInputExpressionAllowed)
@@ -102,13 +102,13 @@ class LintConfigServiceTest {
                 identifierFormat = "snake case",
             )
 
-        `when`(lintConfigRepository.findByUserId(testUserId)).thenReturn(null)
+        `when`(lintConfigRepository.findByUserId(testUserId.toString())).thenReturn(null)
         `when`(lintConfigRepository.save(any(LintConfig::class.java))).thenAnswer { it.arguments[0] }
 
-        val result = lintConfigService.updateConfig(testUserId, request)
+        val result = lintConfigService.updateConfig(testUserId.toString(), request)
 
         assertNotNull(result)
-        assertEquals(testUserId, result.userId)
+        assertEquals(testUserId.toString(), result.userId)
         assertEquals("snake case", result.identifierFormat)
         verify(lintConfigRepository, times(1)).save(any(LintConfig::class.java))
     }
@@ -118,13 +118,13 @@ class LintConfigServiceTest {
         val config =
             LintConfig(
                 id = UUID.randomUUID(),
-                userId = testUserId,
+                userId = testUserId.toString(),
                 config = """{"identifier_format":"camel case"}""",
             )
 
-        `when`(lintConfigRepository.findByUserId(testUserId)).thenReturn(config)
+        `when`(lintConfigRepository.findByUserId(testUserId.toString())).thenReturn(config)
 
-        val result = lintConfigService.getConfigJson(testUserId)
+        val result = lintConfigService.getConfigJson(testUserId.toString())
 
         assertNotNull(result)
         assertEquals("""{"identifier_format":"camel case"}""", result)

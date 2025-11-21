@@ -38,35 +38,35 @@ class FormatConfigServiceTest {
         val config =
             FormatConfig(
                 id = UUID.randomUUID(),
-                userId = testUserId,
+                userId = testUserId.toString(),
                 config = """{"space_before_colon":false,"space_after_colon":true,"indent_inside_block":4}""",
             )
 
-        `when`(formatConfigRepository.findByUserId(testUserId)).thenReturn(config)
+        `when`(formatConfigRepository.findByUserId(testUserId.toString())).thenReturn(config)
 
-        val result = formatConfigService.getConfig(testUserId)
+        val result = formatConfigService.getConfig(testUserId.toString())
 
         assertNotNull(result)
-        assertEquals(testUserId, result.userId)
+        assertEquals(testUserId.toString(), result.userId)
         assertEquals(false, result.spaceBeforeColon)
         assertEquals(true, result.spaceAfterColon)
         assertEquals(4, result.indentInsideBlock)
-        verify(formatConfigRepository, times(1)).findByUserId(testUserId)
+        verify(formatConfigRepository, times(1)).findByUserId(testUserId.toString())
     }
 
     @Test
     fun `should create default config when user has no config`() {
-        `when`(formatConfigRepository.findByUserId(testUserId)).thenReturn(null)
+        `when`(formatConfigRepository.findByUserId(testUserId.toString())).thenReturn(null)
         `when`(formatConfigRepository.save(any(FormatConfig::class.java))).thenAnswer { it.arguments[0] }
 
-        val result = formatConfigService.getConfig(testUserId)
+        val result = formatConfigService.getConfig(testUserId.toString())
 
         assertNotNull(result)
-        assertEquals(testUserId, result.userId)
+        assertEquals(testUserId.toString(), result.userId)
         assertEquals(false, result.spaceBeforeColon)
         assertEquals(true, result.spaceAfterColon)
         assertEquals(4, result.indentInsideBlock)
-        verify(formatConfigRepository, times(1)).findByUserId(testUserId)
+        verify(formatConfigRepository, times(1)).findByUserId(testUserId.toString())
         verify(formatConfigRepository, times(1)).save(any(FormatConfig::class.java))
     }
 
@@ -75,7 +75,7 @@ class FormatConfigServiceTest {
         val existingConfig =
             FormatConfig(
                 id = UUID.randomUUID(),
-                userId = testUserId,
+                userId = testUserId.toString(),
                 config = """{"space_before_colon":false}""",
             )
 
@@ -88,13 +88,13 @@ class FormatConfigServiceTest {
                 indentInsideBlock = 2,
             )
 
-        `when`(formatConfigRepository.findByUserId(testUserId)).thenReturn(existingConfig)
+        `when`(formatConfigRepository.findByUserId(testUserId.toString())).thenReturn(existingConfig)
         `when`(formatConfigRepository.save(any(FormatConfig::class.java))).thenAnswer { it.arguments[0] }
 
-        val result = formatConfigService.updateConfig(testUserId, request)
+        val result = formatConfigService.updateConfig(testUserId.toString(), request)
 
         assertNotNull(result)
-        assertEquals(testUserId, result.userId)
+        assertEquals(testUserId.toString(), result.userId)
         assertEquals(true, result.spaceBeforeColon)
         assertEquals(false, result.spaceAfterColon)
         assertEquals(true, result.spaceAroundEquals)
@@ -111,13 +111,13 @@ class FormatConfigServiceTest {
                 indentInsideBlock = 8,
             )
 
-        `when`(formatConfigRepository.findByUserId(testUserId)).thenReturn(null)
+        `when`(formatConfigRepository.findByUserId(testUserId.toString())).thenReturn(null)
         `when`(formatConfigRepository.save(any(FormatConfig::class.java))).thenAnswer { it.arguments[0] }
 
-        val result = formatConfigService.updateConfig(testUserId, request)
+        val result = formatConfigService.updateConfig(testUserId.toString(), request)
 
         assertNotNull(result)
-        assertEquals(testUserId, result.userId)
+        assertEquals(testUserId.toString(), result.userId)
         assertEquals(true, result.spaceBeforeColon)
         assertEquals(8, result.indentInsideBlock)
         verify(formatConfigRepository, times(1)).save(any(FormatConfig::class.java))
@@ -128,13 +128,13 @@ class FormatConfigServiceTest {
         val config =
             FormatConfig(
                 id = UUID.randomUUID(),
-                userId = testUserId,
+                userId = testUserId.toString(),
                 config = """{"indent_inside_block":4}""",
             )
 
-        `when`(formatConfigRepository.findByUserId(testUserId)).thenReturn(config)
+        `when`(formatConfigRepository.findByUserId(testUserId.toString())).thenReturn(config)
 
-        val result = formatConfigService.getConfigJson(testUserId)
+        val result = formatConfigService.getConfigJson(testUserId.toString())
 
         assertNotNull(result)
         assertEquals("""{"indent_inside_block":4}""", result)

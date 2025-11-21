@@ -7,6 +7,7 @@ import com.ingsis.grupo10.snippet.dto.Created
 import com.ingsis.grupo10.snippet.dto.SnippetCreateRequest
 import com.ingsis.grupo10.snippet.dto.SnippetDetailDto
 import com.ingsis.grupo10.snippet.dto.SnippetSummaryDto
+import com.ingsis.grupo10.snippet.dto.SnippetUICreateRequest
 import com.ingsis.grupo10.snippet.dto.filetype.FileTypeResponse
 import com.ingsis.grupo10.snippet.dto.formatconfig.FormatConfigRequest
 import com.ingsis.grupo10.snippet.dto.lintconfig.LintConfigRequest
@@ -48,13 +49,13 @@ class SnippetService(
     }
 
     fun createSnippet(
-        request: SnippetCreateRequest,
+        request: SnippetUICreateRequest,
         snippetId: UUID,
     ): Created {
         val validationResult =
             printScriptClient.validateSnippet(
-                code = request.code,
-                version = request.version,
+                code = request.content,
+                version = "1.0",
             )
 
         when (validationResult) {
@@ -67,14 +68,14 @@ class SnippetService(
 
             ValidationResult.Success -> {
                 val language =
-                    languageRepository.findByName(request.languageName)
+                    languageRepository.findByName(request.language)
                         ?: throw IllegalArgumentException("Language not supported")
 
                 val assetResult =
                     assetClient.createAsset(
                         container = "snippets",
                         key = snippetId.toString(), // asociamos esta key con el ID del snippet
-                        content = request.code,
+                        content = request.content,
                     )
 
                 // Store as "container/key" format
@@ -87,8 +88,8 @@ class SnippetService(
                         name = request.name,
                         language = language,
                         codeUrl = codeUrl,
-                        description = request.description,
-                        version = request.version,
+                        description = "",
+                        version = "1.0",
                         createdAt = LocalDateTime.now(),
                         updatedAt = LocalDateTime.now(),
                     )
@@ -327,10 +328,10 @@ class SnippetService(
     ): PaginatedSnippetsResponse {
         val pageable = PageRequest.of(page, pageSize)
 
+        // TODO: Filter by user's snippets via auth-service if needed
         val result =
             snippetRepository
-                .findByUserIdAndNameContainingIgnoreCase(
-                    userId,
+                .findByNameContainingIgnoreCase(
                     name ?: "",
                     pageable,
                 )
@@ -341,9 +342,11 @@ class SnippetService(
                     id = it.id,
                     name = it.name,
                     description = it.description,
-                    language = it.language.toString(),
+                    language = it.language.name,
                     version = it.version,
                     createdAt = it.createdAt.toString(),
+                    // author = userId,
+                    // compliance = logService.getLatestLintStatus(it.id).status,
                 )
             }
 

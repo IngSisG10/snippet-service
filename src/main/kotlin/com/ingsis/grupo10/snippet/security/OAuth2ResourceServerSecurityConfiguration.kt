@@ -3,6 +3,7 @@ package com.ingsis.grupo10.snippet.security
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.http.HttpMethod
 import org.springframework.security.config.Customizer.withDefaults
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
@@ -13,12 +14,14 @@ import org.springframework.security.oauth2.jwt.JwtDecoder
 import org.springframework.security.oauth2.jwt.JwtValidators
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder
 import org.springframework.security.web.SecurityFilterChain
+import org.springframework.web.cors.CorsConfigurationSource
 
 @Configuration
 @EnableWebSecurity
 class OAuth2ResourceServerSecurityConfiguration(
     @Value("\${auth0.audience}") private val audience: String,
     @Value("\${spring.security.oauth2.resourceserver.jwt.issuer-uri}") private val issuer: String,
+    private val corsConfigurationSource: CorsConfigurationSource,
 ) {
     init {
         println("========================================")
@@ -32,15 +35,17 @@ class OAuth2ResourceServerSecurityConfiguration(
     fun filterChain(http: HttpSecurity): SecurityFilterChain {
         println("Configuring Security Filter Chain...")
         http
+            .cors { it.configurationSource(corsConfigurationSource) }
+            .csrf { it.disable() }
             .authorizeHttpRequests {
                 it
-                    .requestMatchers("/", "/health", "/actuator/health", "/public/**")
+                    .requestMatchers(HttpMethod.OPTIONS, "/**")
+                    .permitAll()
+                    .requestMatchers("/", "/health", "/actuator/health", "/public/**", "/snippets/filetypes")
                     .permitAll()
                     .anyRequest()
                     .authenticated()
             }.oauth2ResourceServer { it.jwt(withDefaults()) }
-            .cors(withDefaults())
-            .csrf { it.disable() }
 
         return http.build()
     }
