@@ -345,8 +345,8 @@ class SnippetService(
                     language = it.language.name,
                     version = it.version,
                     createdAt = it.createdAt.toString(),
-                    // author = userId,
-                    // compliance = logService.getLatestLintStatus(it.id).status,
+                    author = userId,
+                    compliance = logService.getLatestLintStatus(it.id).status,
                 )
             }
 

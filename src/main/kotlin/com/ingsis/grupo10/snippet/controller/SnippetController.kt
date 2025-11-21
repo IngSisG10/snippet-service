@@ -44,13 +44,11 @@ class SnippetController(
         @RequestParam(required = false, defaultValue = "") name: String?,
         @AuthenticationPrincipal jwt: Jwt,
     ): ResponseEntity<PaginatedSnippetsResponse> {
-        val userId = jwt.subject
-        /*val namespace = "https://your-app.com"
-        val name = jwt.getClaim<String>("$namespace/name") ?: name*/
+        val username = jwt.getClaimAsString("https://your-app.com/name")
 
         val result =
             snippetService.listSnippetDescriptors(
-                userId = userId,
+                userId = username,
                 page = page,
                 pageSize = pageSize,
                 name = name,

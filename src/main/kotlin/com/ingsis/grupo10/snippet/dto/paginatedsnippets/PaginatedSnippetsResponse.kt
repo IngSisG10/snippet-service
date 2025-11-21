@@ -19,4 +19,6 @@ data class SnippetResponse(
     val extension: String = "ps", // Hardcoded for now. Fixme!
     val version: String,
     val createdAt: String,
+    val author: String,
+    val compliance: String,
 )
