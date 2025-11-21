@@ -8,6 +8,7 @@ import com.ingsis.grupo10.snippet.dto.SnippetCreateRequest
 import com.ingsis.grupo10.snippet.dto.SnippetDetailDto
 import com.ingsis.grupo10.snippet.dto.SnippetSummaryDto
 import com.ingsis.grupo10.snippet.dto.SnippetUICreateRequest
+import com.ingsis.grupo10.snippet.dto.SnippetUIDetailDto
 import com.ingsis.grupo10.snippet.dto.filetype.FileTypeResponse
 import com.ingsis.grupo10.snippet.dto.formatconfig.FormatConfigRequest
 import com.ingsis.grupo10.snippet.dto.lintconfig.LintConfigRequest
@@ -18,6 +19,7 @@ import com.ingsis.grupo10.snippet.dto.validation.ValidationResult
 import com.ingsis.grupo10.snippet.exception.SnippetValidationException
 import com.ingsis.grupo10.snippet.extension.created
 import com.ingsis.grupo10.snippet.extension.toDetailDto
+import com.ingsis.grupo10.snippet.extension.toUIDetailDto
 import com.ingsis.grupo10.snippet.models.Snippet
 import com.ingsis.grupo10.snippet.repository.LanguageRepository
 import com.ingsis.grupo10.snippet.repository.SnippetRepository
@@ -46,6 +48,24 @@ class SnippetService(
                 .orElseThrow { IllegalArgumentException("Snippet not found") }
 
         return snippet.toDetailDto()
+    }
+
+    fun getUISnippetById(
+        id: UUID,
+        username: String,
+    ): SnippetUIDetailDto {
+        val snippet =
+            snippetRepository
+                .findById(id)
+                .orElseThrow { IllegalArgumentException("Snippet not found") }
+
+        val content =
+            run {
+                val (container, key) = parseCodeUrl(snippet.codeUrl)
+                assetClient.getAsset(container, key)
+            }
+
+        return snippet.toUIDetailDto(content, username)
     }
 
     fun createSnippet(

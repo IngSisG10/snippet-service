@@ -5,6 +5,7 @@ import com.ingsis.grupo10.snippet.dto.SnippetCreateRequest
 import com.ingsis.grupo10.snippet.dto.SnippetDetailDto
 import com.ingsis.grupo10.snippet.dto.SnippetSummaryDto
 import com.ingsis.grupo10.snippet.dto.SnippetUICreateRequest
+import com.ingsis.grupo10.snippet.dto.SnippetUIDetailDto
 import com.ingsis.grupo10.snippet.dto.filetype.FileTypeResponse
 import com.ingsis.grupo10.snippet.dto.paginatedsnippets.PaginatedSnippetsResponse
 import com.ingsis.grupo10.snippet.dto.rules.RuleDto
@@ -79,8 +80,10 @@ class SnippetController(
     @GetMapping("/{id}")
     fun getSnippetById(
         @PathVariable id: UUID,
-    ): ResponseEntity<SnippetDetailDto> {
-        val snippet = snippetService.getSnippetById(id)
+        @AuthenticationPrincipal jwt: Jwt,
+    ): ResponseEntity<SnippetUIDetailDto> {
+        val username = jwt.getClaimAsString("https://your-app.com/name")
+        val snippet = snippetService.getUISnippetById(id, username)
         return ResponseEntity.ok(snippet)
     }
 
