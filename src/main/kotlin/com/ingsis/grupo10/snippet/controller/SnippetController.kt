@@ -5,10 +5,13 @@ import com.ingsis.grupo10.snippet.dto.SnippetCreateRequest
 import com.ingsis.grupo10.snippet.dto.SnippetDetailDto
 import com.ingsis.grupo10.snippet.dto.SnippetSummaryDto
 import com.ingsis.grupo10.snippet.dto.filetype.FileTypeResponse
+import com.ingsis.grupo10.snippet.dto.paginatedsnippets.PaginatedSnippetsResponse
 import com.ingsis.grupo10.snippet.dto.rules.RuleDto
+import com.ingsis.grupo10.snippet.models.Test
 import com.ingsis.grupo10.snippet.producer.FormatRequestProducer
 import com.ingsis.grupo10.snippet.producer.LintRequestProducer
 import com.ingsis.grupo10.snippet.service.SnippetService
+import com.ingsis.grupo10.snippet.service.TestCaseService
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
@@ -28,10 +31,31 @@ import java.util.UUID
 @RequestMapping("/snippets")
 class SnippetController(
     private val snippetService: SnippetService,
+    private val testCaseService: TestCaseService,
     private val authClient: AuthClient,
     private val lintRequestProducer: LintRequestProducer,
     private val formatRequestProducer: FormatRequestProducer,
 ) {
+    @GetMapping("/descriptors")
+    fun listSnippetDescriptors(
+        @RequestParam page: Int,
+        @RequestParam pageSize: Int,
+        @RequestParam(required = false, defaultValue = "") name: String?,
+        @AuthenticationPrincipal jwt: Jwt,
+    ): ResponseEntity<PaginatedSnippetsResponse> {
+        val userId = jwt.subject
+
+        val result =
+            snippetService.listSnippetDescriptors(
+                userId = userId,
+                page = page,
+                pageSize = pageSize,
+                name = name,
+            )
+
+        return ResponseEntity.ok(result)
+    }
+
     // getAll de toda la DB? No tiene sentido, deberia ser por el owner, o los shared.
     @GetMapping
     fun getAllSnippets(
@@ -316,16 +340,16 @@ class SnippetController(
     // todo: Test Cases
 
     @GetMapping("/testcases")
-    fun getTestCases(): ResponseEntity<Map<String, Any>> {
-        val testCases = snippetService.getTestCases()
+    fun getTestCases(): ResponseEntity<List<Test>> {
+        val testCases = testCaseService.getTestCases()
         return ResponseEntity.ok(testCases)
     }
 
     @PostMapping("/testcases")
     fun postTestCase(
-        @RequestBody testCases: Map<String, Any>,
+        @RequestBody testCases: Test,
     ): ResponseEntity<Void> {
-        snippetService.postTestCase(testCases)
+        testCaseService.postTestCase(testCases)
         return ResponseEntity.ok().build()
     }
 
@@ -333,7 +357,7 @@ class SnippetController(
     fun removeTestCase(
         @PathVariable id: UUID,
     ): ResponseEntity<Void> {
-        snippetService.removeTestCase(id)
+        testCaseService.removeTestCase(id)
         return ResponseEntity.ok().build()
     }
 

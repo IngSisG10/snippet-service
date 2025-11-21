@@ -10,6 +10,8 @@ import com.ingsis.grupo10.snippet.dto.SnippetSummaryDto
 import com.ingsis.grupo10.snippet.dto.filetype.FileTypeResponse
 import com.ingsis.grupo10.snippet.dto.formatconfig.FormatConfigRequest
 import com.ingsis.grupo10.snippet.dto.lintconfig.LintConfigRequest
+import com.ingsis.grupo10.snippet.dto.paginatedsnippets.PaginatedSnippetsResponse
+import com.ingsis.grupo10.snippet.dto.paginatedsnippets.SnippetResponse
 import com.ingsis.grupo10.snippet.dto.rules.RuleDto
 import com.ingsis.grupo10.snippet.dto.validation.ValidationResult
 import com.ingsis.grupo10.snippet.exception.SnippetValidationException
@@ -19,6 +21,7 @@ import com.ingsis.grupo10.snippet.models.Snippet
 import com.ingsis.grupo10.snippet.repository.LanguageRepository
 import com.ingsis.grupo10.snippet.repository.SnippetRepository
 import com.ingsis.grupo10.snippet.util.AssetUtils.parseCodeUrl
+import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
@@ -315,6 +318,43 @@ class SnippetService(
 //        }
 //    }
 
+    // List Descriptors
+    fun listSnippetDescriptors(
+        userId: String,
+        page: Int,
+        pageSize: Int,
+        name: String?,
+    ): PaginatedSnippetsResponse {
+        val pageable = PageRequest.of(page, pageSize)
+
+        val result =
+            snippetRepository
+                .findByUserIdAndNameContainingIgnoreCase(
+                    userId,
+                    name ?: "",
+                    pageable,
+                )
+
+        val snippetDtos =
+            result.content.map {
+                SnippetResponse(
+                    id = it.id,
+                    name = it.name,
+                    description = it.description,
+                    language = it.language.toString(),
+                    version = it.version,
+                    createdAt = it.createdAt.toString(),
+                )
+            }
+
+        return PaginatedSnippetsResponse(
+            page = page,
+            pageSize = pageSize,
+            count = result.totalElements,
+            snippets = snippetDtos,
+        )
+    }
+
     // Rules
     fun getFormattingRules(userId: String): List<RuleDto> {
         val json = formatConfigService.getConfigJson(userId)
@@ -392,20 +432,6 @@ class SnippetService(
             readInputExpressionAllowed = rules["readInputExpressionAllowed"] as? Boolean,
         )
 
-    // todo: Test Cases
-    fun getTestCases(): Map<String, Any> {
-        TODO()
-    }
-
-    fun postTestCase(testCase: Map<String, Any>) {
-        TODO()
-    }
-
-    fun removeTestCase(testCaseId: UUID) {
-        TODO()
-    }
-
-    // fixme: File Types
     fun getSupportedFileTypes(): List<FileTypeResponse> =
         languageRepository.findAll().map {
             FileTypeResponse(
