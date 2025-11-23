@@ -15,11 +15,27 @@ import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
 
 @RestController
-@RequestMapping("/snippets")
+@RequestMapping("/tests")
 class TestController(
     private val testService: TestService,
 ) {
-    @PostMapping("/{snippetId}/tests")
+    @GetMapping("/{snippetId}")
+    fun getTestsBySnippet(
+        @PathVariable snippetId: UUID,
+    ): ResponseEntity<List<TestResponseDto>> {
+        val tests = testService.getTestsBySnippet(snippetId)
+        return ResponseEntity.ok(tests)
+    }
+
+    @GetMapping("/{testId}")
+    fun getTestById(
+        @PathVariable testId: UUID,
+    ): ResponseEntity<TestResponseDto> {
+        val test = testService.getTestById(testId)
+        return ResponseEntity.ok(test)
+    }
+
+    @PostMapping("/{snippetId}")
     fun createTest(
         @PathVariable snippetId: UUID,
         @RequestBody request: TestCreateRequest,
@@ -28,23 +44,7 @@ class TestController(
         return ResponseEntity.ok(test)
     }
 
-    @GetMapping("/{snippetId}/tests")
-    fun getTestsBySnippet(
-        @PathVariable snippetId: UUID,
-    ): ResponseEntity<List<TestResponseDto>> {
-        val tests = testService.getTestsBySnippet(snippetId)
-        return ResponseEntity.ok(tests)
-    }
-
-    @GetMapping("/tests/{testId}")
-    fun getTestById(
-        @PathVariable testId: UUID,
-    ): ResponseEntity<TestResponseDto> {
-        val test = testService.getTestById(testId)
-        return ResponseEntity.ok(test)
-    }
-
-    @PutMapping("/tests/{testId}")
+    @PutMapping("/{testId}")
     fun updateTest(
         @PathVariable testId: UUID,
         @RequestBody request: TestCreateRequest,
@@ -53,11 +53,20 @@ class TestController(
         return ResponseEntity.ok(test)
     }
 
-    @DeleteMapping("/tests/{testId}")
+    @DeleteMapping("/{testId}")
     fun deleteTest(
         @PathVariable testId: UUID,
     ): ResponseEntity<Void> {
         testService.deleteTest(testId)
         return ResponseEntity.noContent().build()
+    }
+
+    // todo
+    @PostMapping("/run/{testId}")
+    fun runTest(
+        @PathVariable testId: UUID,
+    ): ResponseEntity<Any> {
+        val result = testService.runTest(testId)
+        return ResponseEntity.ok(result)
     }
 }

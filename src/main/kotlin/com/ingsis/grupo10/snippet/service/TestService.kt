@@ -13,6 +13,41 @@ class TestService(
     private val testRepository: TestRepository,
     private val snippetRepository: SnippetRepository,
 ) {
+    // todo: para poder ejecutar el test, debemos pegarle al execute del printscript
+    // todo: para ello, necesitamos utilizar el PrintScriptClient y usar el endpoint de ejecucion
+
+    // todo: Es probable que tengamos que matchear los outputs esperados (ui)
+    //  con los outputs reales (la ejecucion desde printscript)
+
+    fun getTestsBySnippet(snippetId: UUID): List<TestResponseDto> {
+        if (!snippetRepository.existsById(snippetId)) {
+            throw IllegalArgumentException("Snippet not found")
+        }
+
+        return testRepository.findBySnippetId(snippetId).map {
+            TestResponseDto(
+                id = it.id,
+                name = it.name,
+                input = it.input,
+                output = it.output,
+            )
+        }
+    }
+
+    fun getTestById(testId: UUID): TestResponseDto {
+        val test =
+            testRepository
+                .findById(testId)
+                .orElseThrow { IllegalArgumentException("Test not found") }
+
+        return TestResponseDto(
+            id = test.id,
+            name = test.name,
+            input = test.input,
+            output = test.output,
+        )
+    }
+
     fun createTest(
         snippetId: UUID,
         request: TestCreateRequest,
@@ -27,49 +62,17 @@ class TestService(
                 id = UUID.randomUUID(),
                 snippet = snippet,
                 name = request.name,
-                inputs = request.inputs,
-                expectedOutputs = request.expectedOutputs,
+                input = request.input,
+                output = request.output,
             )
 
         testRepository.save(test)
 
         return TestResponseDto(
             id = test.id,
-            snippetId = test.snippet.id,
             name = test.name,
-            inputs = test.inputs,
-            expectedOutputs = test.expectedOutputs,
-        )
-    }
-
-    fun getTestsBySnippet(snippetId: UUID): List<TestResponseDto> {
-        if (!snippetRepository.existsById(snippetId)) {
-            throw IllegalArgumentException("Snippet not found")
-        }
-
-        return testRepository.findBySnippetId(snippetId).map {
-            TestResponseDto(
-                id = it.id,
-                snippetId = it.snippet.id,
-                name = it.name,
-                inputs = it.inputs,
-                expectedOutputs = it.expectedOutputs,
-            )
-        }
-    }
-
-    fun getTestById(testId: UUID): TestResponseDto {
-        val test =
-            testRepository
-                .findById(testId)
-                .orElseThrow { IllegalArgumentException("Test not found") }
-
-        return TestResponseDto(
-            id = test.id,
-            snippetId = test.snippet.id,
-            name = test.name,
-            inputs = test.inputs,
-            expectedOutputs = test.expectedOutputs,
+            input = test.input,
+            output = test.output,
         )
     }
 
@@ -85,18 +88,17 @@ class TestService(
         val updatedTest =
             existingTest.copy(
                 name = request.name,
-                inputs = request.inputs,
-                expectedOutputs = request.expectedOutputs,
+                input = request.input,
+                output = request.output,
             )
 
         testRepository.save(updatedTest)
 
         return TestResponseDto(
             id = updatedTest.id,
-            snippetId = updatedTest.snippet.id,
             name = updatedTest.name,
-            inputs = updatedTest.inputs,
-            expectedOutputs = updatedTest.expectedOutputs,
+            input = updatedTest.input,
+            output = updatedTest.output,
         )
     }
 
@@ -105,5 +107,10 @@ class TestService(
             throw IllegalArgumentException("Test not found")
         }
         testRepository.deleteById(testId)
+    }
+
+    // "Call" Printscript to execute snippet and check if test passed (output coincides)
+    fun runTest(testId: UUID) {
+        TODO()
     }
 }
