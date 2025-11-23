@@ -28,12 +28,11 @@ class PrintScriptClient(
             val response =
                 webClient
                     .post()
-                    .uri("/api/printscript/verify")
+                    .uri("/api/printscript/verify?version=$version")
                     .contentType(MediaType.MULTIPART_FORM_DATA)
                     .body(
                         BodyInserters
                             .fromMultipartData("snippet", FileSystemResource(tempFilePath.toFile()))
-                            .with("version", version)
                             .with("config", createDefaultLintConfig()), // JSON con reglas
                     ).retrieve()
                     .bodyToMono(LintResultDTO::class.java)
@@ -107,12 +106,11 @@ class PrintScriptClient(
             val response =
                 webClient
                     .post()
-                    .uri("/api/printscript/verify")
+                    .uri("/api/printscript/verify?version=$version")
                     .contentType(MediaType.MULTIPART_FORM_DATA)
                     .body(
                         BodyInserters
                             .fromMultipartData("snippet", FileSystemResource(tempFilePath.toFile()))
-                            .with("version", version)
                             .with("config", FileSystemResource(tempConfigPath.toFile())),
                     ).retrieve()
                     .bodyToMono(LintResultDTO::class.java)
@@ -140,12 +138,11 @@ class PrintScriptClient(
             val formattedCode =
                 webClient
                     .post()
-                    .uri("/api/printscript/format")
+                    .uri("/api/printscript/format?version=$version")
                     .contentType(MediaType.MULTIPART_FORM_DATA)
                     .body(
                         BodyInserters
                             .fromMultipartData("snippet", FileSystemResource(tempFilePath.toFile()))
-                            .with("version", version)
                             .with("config", FileSystemResource(tempConfigPath.toFile())),
                     ).retrieve()
                     .bodyToMono(String::class.java)

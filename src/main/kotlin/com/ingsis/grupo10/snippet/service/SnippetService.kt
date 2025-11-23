@@ -4,11 +4,12 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.ingsis.grupo10.snippet.client.AssetClient
 import com.ingsis.grupo10.snippet.client.PrintScriptClient
 import com.ingsis.grupo10.snippet.dto.Created
-import com.ingsis.grupo10.snippet.dto.SnippetCreateRequest
 import com.ingsis.grupo10.snippet.dto.SnippetDetailDto
 import com.ingsis.grupo10.snippet.dto.SnippetSummaryDto
 import com.ingsis.grupo10.snippet.dto.SnippetUICreateRequest
 import com.ingsis.grupo10.snippet.dto.SnippetUIDetailDto
+import com.ingsis.grupo10.snippet.dto.SnippetUIFormatDto
+import com.ingsis.grupo10.snippet.dto.SnippetUIUpdateRequest
 import com.ingsis.grupo10.snippet.dto.filetype.FileTypeResponse
 import com.ingsis.grupo10.snippet.dto.formatconfig.FormatConfigRequest
 import com.ingsis.grupo10.snippet.dto.lintconfig.LintConfigRequest
@@ -20,6 +21,7 @@ import com.ingsis.grupo10.snippet.exception.SnippetValidationException
 import com.ingsis.grupo10.snippet.extension.created
 import com.ingsis.grupo10.snippet.extension.toDetailDto
 import com.ingsis.grupo10.snippet.extension.toUIDetailDto
+import com.ingsis.grupo10.snippet.extension.toUIFormatDto
 import com.ingsis.grupo10.snippet.models.Snippet
 import com.ingsis.grupo10.snippet.repository.LanguageRepository
 import com.ingsis.grupo10.snippet.repository.SnippetRepository
@@ -203,7 +205,7 @@ class SnippetService(
 
     fun updateSnippet(
         id: UUID,
-        request: SnippetCreateRequest,
+        request: SnippetUIUpdateRequest,
     ): SnippetDetailDto {
         val existingSnippet =
             snippetRepository
@@ -212,8 +214,8 @@ class SnippetService(
 
         val validationResult =
             printScriptClient.validateSnippet(
-                code = request.code,
-                version = request.version,
+                code = request.content,
+                version = "1.0",
             )
 
         when (validationResult) {
@@ -225,26 +227,22 @@ class SnippetService(
             }
 
             ValidationResult.Success -> {
-                val language =
-                    languageRepository.findByName(request.languageName)
-                        ?: throw IllegalArgumentException("Language not supported")
-
                 val (container, key) = parseCodeUrl(existingSnippet.codeUrl)
 
                 assetClient.createAsset(
                     container = container,
                     key = key,
-                    content = request.code,
+                    content = request.content,
                 )
 
                 val updatedSnippet =
                     Snippet(
                         id = existingSnippet.id,
-                        name = request.name,
-                        description = request.description,
+                        name = existingSnippet.name,
+                        description = existingSnippet.description,
                         codeUrl = existingSnippet.codeUrl,
-                        language = language,
-                        version = request.version,
+                        language = existingSnippet.language,
+                        version = existingSnippet.version,
                         createdAt = existingSnippet.createdAt,
                         updatedAt = LocalDateTime.now(),
                     )
@@ -286,7 +284,7 @@ class SnippetService(
     }
 
     @Transactional
-    fun formatSnippet(id: UUID): SnippetDetailDto {
+    fun formatSnippet(id: UUID): SnippetUIFormatDto {
         val snippet =
             snippetRepository
                 .findById(id)
@@ -312,7 +310,7 @@ class SnippetService(
 
         logService.logFormatting(snippet, formatResult.formattedCode, formatConfig)
 
-        return snippet.toDetailDto()
+        return snippet.toUIFormatDto(formatResult.formattedCode)
     }
 
 //    /**

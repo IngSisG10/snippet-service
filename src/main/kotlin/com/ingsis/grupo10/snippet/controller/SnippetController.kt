@@ -1,11 +1,12 @@
 package com.ingsis.grupo10.snippet.controller
 
 import com.ingsis.grupo10.snippet.client.AuthClient
-import com.ingsis.grupo10.snippet.dto.SnippetCreateRequest
 import com.ingsis.grupo10.snippet.dto.SnippetDetailDto
 import com.ingsis.grupo10.snippet.dto.SnippetSummaryDto
 import com.ingsis.grupo10.snippet.dto.SnippetUICreateRequest
 import com.ingsis.grupo10.snippet.dto.SnippetUIDetailDto
+import com.ingsis.grupo10.snippet.dto.SnippetUIFormatDto
+import com.ingsis.grupo10.snippet.dto.SnippetUIUpdateRequest
 import com.ingsis.grupo10.snippet.dto.filetype.FileTypeResponse
 import com.ingsis.grupo10.snippet.dto.paginatedsnippets.PaginatedSnippetsResponse
 import com.ingsis.grupo10.snippet.dto.rules.RuleDto
@@ -152,7 +153,7 @@ class SnippetController(
     fun updateSnippet(
         @AuthenticationPrincipal jwt: Jwt,
         @PathVariable id: UUID,
-        @RequestBody request: SnippetCreateRequest,
+        @RequestBody request: SnippetUIUpdateRequest,
     ): ResponseEntity<SnippetDetailDto> {
         val userId = jwt.subject
 
@@ -187,8 +188,9 @@ class SnippetController(
             .body(mapOf("message" to "Lint request queued for processing"))
     }
 
-    @PostMapping("/{id}/format")
-    fun formatSnippet(
+    // TODO: Sacar este endpoint, y acceder a la lógica del formatRequestProducer.publishFormatRequest() desde el endpoint de FormatConfigController
+    @PostMapping("/{id}/auto-format")
+    fun autoFormatSnippet(
         @AuthenticationPrincipal jwt: Jwt,
         @PathVariable id: UUID,
     ): ResponseEntity<Map<String, String>> {
@@ -206,6 +208,23 @@ class SnippetController(
         return ResponseEntity
             .status(HttpStatus.ACCEPTED)
             .body(mapOf("message" to "Format request queued for processing"))
+    }
+
+    @PostMapping("/{id}/format")
+    fun formatSnippet(
+        @AuthenticationPrincipal jwt: Jwt,
+        @PathVariable id: UUID,
+    ): ResponseEntity<SnippetUIFormatDto> {
+        val userId = jwt.subject
+
+        val hasOwnerPermission = authClient.checkPermission(id, userId, "OWNER")
+
+        if (!hasOwnerPermission) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
+        }
+
+        val snippet = snippetService.formatSnippet(id)
+        return ResponseEntity.ok(snippet)
     }
 
     @GetMapping("/my-snippets")
@@ -329,6 +348,7 @@ class SnippetController(
         @AuthenticationPrincipal jwt: Jwt,
     ): ResponseEntity<Void> {
         snippetService.updateFormattingRules(rules, jwt.subject)
+
         return ResponseEntity.ok().build()
     }
 
