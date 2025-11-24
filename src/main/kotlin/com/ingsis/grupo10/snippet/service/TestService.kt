@@ -1,7 +1,12 @@
 package com.ingsis.grupo10.snippet.service
 
+import com.ingsis.grupo10.snippet.client.PrintScriptClient
 import com.ingsis.grupo10.snippet.dto.TestCreateRequest
 import com.ingsis.grupo10.snippet.dto.TestResponseDto
+import com.ingsis.grupo10.snippet.dto.tests.RunTestRequest
+import com.ingsis.grupo10.snippet.dto.tests.TestResult
+import com.ingsis.grupo10.snippet.dto.validation.ExecutionResult
+import com.ingsis.grupo10.snippet.exception.SnippetExecutionException
 import com.ingsis.grupo10.snippet.models.Test
 import com.ingsis.grupo10.snippet.repository.SnippetRepository
 import com.ingsis.grupo10.snippet.repository.TestRepository
@@ -12,6 +17,7 @@ import java.util.UUID
 class TestService(
     private val testRepository: TestRepository,
     private val snippetRepository: SnippetRepository,
+    private val printScriptClient: PrintScriptClient,
 ) {
     // todo: para poder ejecutar el test, debemos pegarle al execute del printscript
     // todo: para ello, necesitamos utilizar el PrintScriptClient y usar el endpoint de ejecucion
@@ -110,7 +116,43 @@ class TestService(
     }
 
     // "Call" Printscript to execute snippet and check if test passed (output coincides)
-    fun runTest(testId: UUID) {
-        TODO()
+    fun runTest(
+        testId: UUID,
+        snippetId: UUID,
+        request: RunTestRequest,
+    ): TestResult {
+        // printLn
+        // todo: tendriamos que acceder
+        //  al resultado de la ejecucion del snippet
+        // para poder comparar outputs
+
+        val executionResult =
+            printScriptClient.executeSnippet(
+                code = request.content,
+                input = request.input ?: emptyList(),
+                version = request.version,
+            )
+
+        when (executionResult) {
+            is ExecutionResult.Failed -> {
+                throw SnippetExecutionException(
+                    "Snippet execution failed",
+                    executionResult.errors,
+                )
+            }
+
+            is ExecutionResult.Success -> {
+                val expectedOutput = request.output ?: emptyList()
+                val actualOutput = executionResult.output
+
+                val passed = expectedOutput == actualOutput
+
+                return TestResult(
+                    passed = passed,
+                    expected = expectedOutput,
+                    actual = actualOutput,
+                )
+            }
+        }
     }
 }

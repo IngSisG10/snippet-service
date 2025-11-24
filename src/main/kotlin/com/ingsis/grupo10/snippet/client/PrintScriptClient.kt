@@ -1,5 +1,8 @@
 package com.ingsis.grupo10.snippet.client
 
+import com.ingsis.grupo10.snippet.dto.tests.ExecutionDto
+import com.ingsis.grupo10.snippet.dto.validation.ExecutionError
+import com.ingsis.grupo10.snippet.dto.validation.ExecutionResult
 import com.ingsis.grupo10.snippet.dto.validation.FormatResultDTO
 import com.ingsis.grupo10.snippet.dto.validation.LintResultDTO
 import com.ingsis.grupo10.snippet.dto.validation.ValidationError
@@ -48,6 +51,52 @@ class PrintScriptClient(
                             line = extractLineNumber(it.message), // Parsear del mensaje
                             column = extractColumnNumber(it.message),
                             rule = it.type,
+                        )
+                    },
+                )
+            }
+        } finally {
+            tempFilePath.deleteExisting()
+        }
+    }
+
+    // todo: ver como nuestra implementacion de printscript
+    // manejaria particularmente los inputs y outputs
+
+    fun executeSnippet(
+        code: String,
+        input: List<String>?,
+        version: String,
+    ): ExecutionResult {
+        val tempFilePath = createTempFile(prefix = "snippet", suffix = ".ps")
+        tempFilePath.writeText(code)
+
+        try {
+            val response =
+                webClient
+                    .post()
+                    .uri("/api/printscript/execute?version=$version")
+                    .contentType(MediaType.MULTIPART_FORM_DATA)
+                    .body(
+                        BodyInserters
+                            .fromMultipartData("snippet", FileSystemResource(tempFilePath.toFile()))
+                            .with("config", createDefaultLintConfig()), // JSON con reglas
+                    ).retrieve()
+                    .bodyToMono(ExecutionDto::class.java)
+                    .block() ?: throw RuntimeException("No response from PrintScript service")
+
+            return if (response.errors.isEmpty()) {
+                ExecutionResult.Success(
+                    output = response.output,
+                )
+            } else {
+                ExecutionResult.Failed(
+                    response.errors.map {
+                        ExecutionError(
+                            message = it.message,
+//                            line = extractLineNumber(it.message), // Parsear del mensaje
+//                            column = extractColumnNumber(it.message),
+//                            rule = it.type,
                         )
                     },
                 )
