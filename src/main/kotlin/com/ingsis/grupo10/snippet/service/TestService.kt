@@ -1,5 +1,6 @@
 package com.ingsis.grupo10.snippet.service
 
+import com.ingsis.grupo10.snippet.client.AssetClient
 import com.ingsis.grupo10.snippet.client.PrintScriptClient
 import com.ingsis.grupo10.snippet.dto.TestCreateRequest
 import com.ingsis.grupo10.snippet.dto.TestResponseDto
@@ -10,6 +11,7 @@ import com.ingsis.grupo10.snippet.exception.SnippetExecutionException
 import com.ingsis.grupo10.snippet.models.Test
 import com.ingsis.grupo10.snippet.repository.SnippetRepository
 import com.ingsis.grupo10.snippet.repository.TestRepository
+import com.ingsis.grupo10.snippet.util.AssetUtils.parseCodeUrl
 import org.springframework.stereotype.Service
 import java.util.UUID
 
@@ -18,6 +20,7 @@ class TestService(
     private val testRepository: TestRepository,
     private val snippetRepository: SnippetRepository,
     private val printScriptClient: PrintScriptClient,
+    private val assetClient: AssetClient,
 ) {
     // todo: para poder ejecutar el test, debemos pegarle al execute del printscript
     // todo: para ello, necesitamos utilizar el PrintScriptClient y usar el endpoint de ejecucion
@@ -117,14 +120,23 @@ class TestService(
 
     // "Call" Printscript to execute snippet and check if test passed (output coincides)
     fun runTest(
-        testId: UUID,
+        snippetId: UUID,
         request: RunTestRequest,
     ): TestResult {
+        val snippet =
+            snippetRepository
+                .findById(snippetId)
+                .orElseThrow { IllegalArgumentException("Snippet not found") }
+
+        val (container, key) = parseCodeUrl(snippet.codeUrl)
+
+        val code = assetClient.getAsset(container, key)
+
         val executionResult =
             printScriptClient.executeSnippet(
-                code = request.content,
+                code = code,
                 input = request.input ?: emptyList(),
-                version = request.version,
+                version = snippet.version,
             )
 
         when (executionResult) {
