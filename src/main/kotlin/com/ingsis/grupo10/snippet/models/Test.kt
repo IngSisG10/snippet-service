@@ -24,11 +24,11 @@ data class Test(
     @ElementCollection
     @CollectionTable(name = "test_input", joinColumns = [JoinColumn(name = "test_id")])
     @Column(name = "input_value")
-    val input: List<String>,
+    val input: List<String> = emptyList(),
     @ElementCollection
     @CollectionTable(name = "test_output", joinColumns = [JoinColumn(name = "test_id")])
     @Column(name = "output_value")
-    val output: List<String>,
+    val output: List<String> = emptyList(),
     @OneToMany(mappedBy = "test")
     val logs: Set<Log> = emptySet(),
 )

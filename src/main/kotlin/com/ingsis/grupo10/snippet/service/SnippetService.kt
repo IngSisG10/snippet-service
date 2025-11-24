@@ -338,6 +338,7 @@ class SnippetService(
 //    }
 
     // List Descriptors
+    // fixme: manejar casos en los cuales no tenemos "PaginatedSnippets" que mostrar.
     fun listSnippetDescriptors(
         userId: String,
         page: Int,

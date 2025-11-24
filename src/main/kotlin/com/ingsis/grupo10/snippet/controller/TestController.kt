@@ -27,13 +27,13 @@ class TestController(
         return ResponseEntity.ok(tests)
     }
 
-    @GetMapping("/{testId}")
-    fun getTestById(
-        @PathVariable testId: UUID,
-    ): ResponseEntity<TestResponseDto> {
-        val test = testService.getTestById(testId)
-        return ResponseEntity.ok(test)
-    }
+//    @GetMapping("/{testId}")
+//    fun getTestById(
+//        @PathVariable testId: UUID,
+//    ): ResponseEntity<TestResponseDto> {
+//        val test = testService.getTestById(testId)
+//        return ResponseEntity.ok(test)
+//    }
 
     @PostMapping("/{snippetId}")
     fun createTest(
