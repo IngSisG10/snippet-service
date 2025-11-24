@@ -2,6 +2,7 @@ package com.ingsis.grupo10.snippet.controller
 
 import com.ingsis.grupo10.snippet.dto.TestCreateRequest
 import com.ingsis.grupo10.snippet.dto.TestResponseDto
+import com.ingsis.grupo10.snippet.dto.tests.RunTestRequest
 import com.ingsis.grupo10.snippet.service.TestService
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -61,12 +62,12 @@ class TestController(
         return ResponseEntity.noContent().build()
     }
 
-    // todo
     @PostMapping("/run/{testId}")
     fun runTest(
         @PathVariable testId: UUID,
+        @RequestBody request: RunTestRequest,
     ): ResponseEntity<Any> {
-        val result = testService.runTest(testId)
+        val result = testService.runTest(testId, request)
         return ResponseEntity.ok(result)
     }
 }
