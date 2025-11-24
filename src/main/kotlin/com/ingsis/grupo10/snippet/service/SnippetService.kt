@@ -2,6 +2,7 @@ package com.ingsis.grupo10.snippet.service
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.ingsis.grupo10.snippet.client.AssetClient
+import com.ingsis.grupo10.snippet.client.AuthClient
 import com.ingsis.grupo10.snippet.client.PrintScriptClient
 import com.ingsis.grupo10.snippet.dto.Created
 import com.ingsis.grupo10.snippet.dto.SnippetDetailDto
@@ -38,16 +39,14 @@ class SnippetService(
     private val languageRepository: LanguageRepository,
     private val printScriptClient: PrintScriptClient,
     private val assetClient: AssetClient,
+    private val authClient: AuthClient,
     private val logService: LogService,
     private val lintConfigService: LintConfigService,
     private val formatConfigService: FormatConfigService,
     private val objectMapper: ObjectMapper,
 ) {
     fun getSnippetById(id: UUID): SnippetDetailDto {
-        val snippet =
-            snippetRepository
-                .findById(id)
-                .orElseThrow { IllegalArgumentException("Snippet not found") }
+        val snippet = snippetRepository.findById(id).orElseThrow { IllegalArgumentException("Snippet not found") }
 
         return snippet.toDetailDto()
     }
@@ -56,10 +55,7 @@ class SnippetService(
         id: UUID,
         username: String,
     ): SnippetUIDetailDto {
-        val snippet =
-            snippetRepository
-                .findById(id)
-                .orElseThrow { IllegalArgumentException("Snippet not found") }
+        val snippet = snippetRepository.findById(id).orElseThrow { IllegalArgumentException("Snippet not found") }
 
         val content =
             run {
@@ -170,24 +166,28 @@ class SnippetService(
                     } else {
                         snippets.sortedBy { it.name }
                     }
+
                 "language" ->
                     if (sortDirection?.uppercase() == "DESC") {
                         snippets.sortedByDescending { it.language }
                     } else {
                         snippets.sortedBy { it.language }
                     }
+
                 "compliance" ->
                     if (sortDirection?.uppercase() == "DESC") {
                         snippets.sortedByDescending { it.compliance ?: "" }
                     } else {
                         snippets.sortedBy { it.compliance ?: "" }
                     }
+
                 "createdat" ->
                     if (sortDirection?.uppercase() == "DESC") {
                         snippets.sortedByDescending { it.createdAt }
                     } else {
                         snippets.sortedBy { it.createdAt }
                     }
+
                 else -> snippets // No sorting or default order
             }
 
@@ -195,10 +195,7 @@ class SnippetService(
     }
 
     fun deleteSnippetById(id: UUID) {
-        val snippet =
-            snippetRepository
-                .findById(id)
-                .orElseThrow { IllegalArgumentException("Snippet not found") }
+        val snippet = snippetRepository.findById(id).orElseThrow { IllegalArgumentException("Snippet not found") }
 
         snippetRepository.deleteById(id)
     }
@@ -208,9 +205,7 @@ class SnippetService(
         request: SnippetUIUpdateRequest,
     ): SnippetDetailDto {
         val existingSnippet =
-            snippetRepository
-                .findById(id)
-                .orElseThrow { IllegalArgumentException("Snippet not found") }
+            snippetRepository.findById(id).orElseThrow { IllegalArgumentException("Snippet not found") }
 
         val validationResult =
             printScriptClient.validateSnippet(
@@ -258,10 +253,7 @@ class SnippetService(
 
     @Transactional
     fun lintSnippet(id: UUID): SnippetDetailDto {
-        val snippet =
-            snippetRepository
-                .findById(id)
-                .orElseThrow { IllegalArgumentException("Snippet not found") }
+        val snippet = snippetRepository.findById(id).orElseThrow { IllegalArgumentException("Snippet not found") }
 
         // TODO: Get user-specific lint config - for now use default
         val lintConfig = "{}" // Default config
@@ -285,10 +277,7 @@ class SnippetService(
 
     @Transactional
     fun formatSnippet(id: UUID): SnippetUIFormatDto {
-        val snippet =
-            snippetRepository
-                .findById(id)
-                .orElseThrow { IllegalArgumentException("Snippet not found") }
+        val snippet = snippetRepository.findById(id).orElseThrow { IllegalArgumentException("Snippet not found") }
 
         // TODO: Get user-specific format config - for now use default
         val formatConfig = """{"enforce-spacing-around-equals": true}"""
@@ -348,11 +337,10 @@ class SnippetService(
 
         // TODO: Filter by user's snippets via auth-service if needed
         val result =
-            snippetRepository
-                .findByNameContainingIgnoreCase(
-                    name ?: "",
-                    pageable,
-                )
+            snippetRepository.findByNameContainingIgnoreCase(
+                name ?: "",
+                pageable,
+            )
 
         val snippetDtos =
             result.content.map {
@@ -460,4 +448,29 @@ class SnippetService(
                 extension = "ps", // Hardcoded for now FIXME!
             )
         }
+
+    fun shareSnippet(
+        username: String,
+        snippetId: UUID,
+        targetUserEmail: String,
+    ): SnippetUIDetailDto {
+        val snippet =
+            snippetRepository.findById(snippetId).orElseThrow { IllegalArgumentException("Snippet not found") }
+
+        val isShareSuccessful =
+            authClient.shareSnippet(
+                snippetId = snippetId,
+                targetUserEmail = targetUserEmail,
+            )
+
+        if (!isShareSuccessful) {
+            throw IllegalStateException("Failed to share snippet")
+        }
+
+        val (container, key) = parseCodeUrl(snippet.codeUrl)
+
+        val content = assetClient.getAsset(container, key)
+
+        return snippet.toUIDetailDto(content, username)
+    }
 }
