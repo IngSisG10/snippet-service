@@ -1,6 +1,5 @@
 package com.ingsis.grupo10.snippet.client
 
-import com.ingsis.grupo10.snippet.dto.tests.ExecutionDto
 import com.ingsis.grupo10.snippet.dto.validation.ExecutionError
 import com.ingsis.grupo10.snippet.dto.validation.ExecutionResult
 import com.ingsis.grupo10.snippet.dto.validation.FormatResultDTO
@@ -72,7 +71,7 @@ class PrintScriptClient(
         tempFilePath.writeText(code)
 
         try {
-            val response =
+            val rawResponse =
                 webClient
                     .post()
                     .uri("/api/printscript/execute?version=$version")
@@ -82,25 +81,24 @@ class PrintScriptClient(
                             .fromMultipartData("snippet", FileSystemResource(tempFilePath.toFile()))
                             .with("config", createDefaultLintConfig()), // JSON con reglas
                     ).retrieve()
-                    .bodyToMono(ExecutionDto::class.java)
+                    .bodyToMono(String::class.java)
                     .block() ?: throw RuntimeException("No response from PrintScript service")
 
-            return if (response.errors.isEmpty()) {
-                ExecutionResult.Success(
-                    output = response.output,
-                )
-            } else {
-                ExecutionResult.Failed(
-                    response.errors.map {
-                        ExecutionError(
-                            message = it.message,
-//                            line = extractLineNumber(it.message), // Parsear del mensaje
-//                            column = extractColumnNumber(it.message),
-//                            rule = it.type,
-                        )
-                    },
+            // Si el servicio pone "Error: ..." en el body cuando falla:
+            if (rawResponse.startsWith("Error:")) {
+                return ExecutionResult.Failed(
+                    listOf(ExecutionError(message = rawResponse.removePrefix("Error:").trim())),
                 )
             }
+
+            // Separar por líneas -> lista de strings
+            val outputLines =
+                rawResponse
+                    .lines()
+                    .map { it.trimEnd() }
+                    .filter { it.isNotEmpty() } // opcional
+
+            return ExecutionResult.Success(output = outputLines)
         } finally {
             tempFilePath.deleteExisting()
         }
