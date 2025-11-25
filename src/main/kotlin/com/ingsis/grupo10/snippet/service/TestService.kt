@@ -5,7 +5,7 @@ import com.ingsis.grupo10.snippet.client.PrintScriptClient
 import com.ingsis.grupo10.snippet.dto.TestCreateRequest
 import com.ingsis.grupo10.snippet.dto.TestResponseDto
 import com.ingsis.grupo10.snippet.dto.tests.RunTestRequest
-import com.ingsis.grupo10.snippet.dto.tests.TestResult
+import com.ingsis.grupo10.snippet.dto.tests.TestResultResponse
 import com.ingsis.grupo10.snippet.dto.validation.ExecutionResult
 import com.ingsis.grupo10.snippet.exception.SnippetExecutionException
 import com.ingsis.grupo10.snippet.models.Test
@@ -122,7 +122,7 @@ class TestService(
     fun runTest(
         snippetId: UUID,
         request: RunTestRequest,
-    ): TestResult {
+    ): TestResultResponse {
         val snippet =
             snippetRepository
                 .findById(snippetId)
@@ -153,10 +153,8 @@ class TestService(
 
                 val passed = expectedOutput == actualOutput
 
-                return TestResult(
-                    passed = passed,
-                    expected = expectedOutput,
-                    actual = actualOutput,
+                return TestResultResponse(
+                    status = if (passed) "success" else "fail",
                 )
             }
         }
