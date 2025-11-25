@@ -1,6 +1,7 @@
 package com.ingsis.grupo10.snippet.controller
 
 import com.ingsis.grupo10.snippet.client.AuthClient
+import com.ingsis.grupo10.snippet.dto.GrantPermissionRequest
 import com.ingsis.grupo10.snippet.dto.SnippetDetailDto
 import com.ingsis.grupo10.snippet.dto.SnippetSummaryDto
 import com.ingsis.grupo10.snippet.dto.SnippetUICreateRequest
@@ -363,5 +364,24 @@ class SnippetController(
     fun getSupportedFileTypes(): ResponseEntity<List<FileTypeResponse>> {
         val fileTypes = snippetService.getSupportedFileTypes()
         return ResponseEntity.ok(fileTypes)
+    }
+
+    @PostMapping("/share")
+    fun shareSnippet(
+        @AuthenticationPrincipal jwt: Jwt,
+        @RequestBody request: GrantPermissionRequest,
+    ): ResponseEntity<SnippetUIDetailDto> {
+        val userId = jwt.subject
+        val username = jwt.getClaimAsString("https://your-app.com/name")
+
+        val hasOwnerPermission = authClient.checkPermission(request.snippetId, userId, "OWNER")
+
+        if (!hasOwnerPermission) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
+        }
+
+        val response = snippetService.shareSnippet(username, request.snippetId, request.targetUserEmail)
+
+        return ResponseEntity.ok(response)
     }
 }
