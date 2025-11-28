@@ -11,6 +11,7 @@ import com.ingsis.grupo10.snippet.dto.SnippetUIUpdateRequest
 import com.ingsis.grupo10.snippet.dto.filetype.FileTypeResponse
 import com.ingsis.grupo10.snippet.dto.paginatedsnippets.PaginatedSnippetsResponse
 import com.ingsis.grupo10.snippet.dto.rules.RuleDto
+import com.ingsis.grupo10.snippet.dto.tests.ExecutionDto
 import com.ingsis.grupo10.snippet.producer.FormatRequestProducer
 import com.ingsis.grupo10.snippet.producer.LintRequestProducer
 import com.ingsis.grupo10.snippet.service.SnippetService
@@ -382,6 +383,14 @@ class SnippetController(
 
         val response = snippetService.shareSnippet(username, request.snippetId, request.targetUserEmail)
 
+        return ResponseEntity.ok(response)
+    }
+
+    @PostMapping("/run/{id}")
+    fun runSnippet(
+        @PathVariable id: UUID,
+    ): ResponseEntity<ExecutionDto> {
+        val response = snippetService.runSnippet(id)
         return ResponseEntity.ok(response)
     }
 }

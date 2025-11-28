@@ -17,7 +17,10 @@ import com.ingsis.grupo10.snippet.dto.lintconfig.LintConfigRequest
 import com.ingsis.grupo10.snippet.dto.paginatedsnippets.PaginatedSnippetsResponse
 import com.ingsis.grupo10.snippet.dto.paginatedsnippets.SnippetResponse
 import com.ingsis.grupo10.snippet.dto.rules.RuleDto
+import com.ingsis.grupo10.snippet.dto.tests.ExecutionDto
+import com.ingsis.grupo10.snippet.dto.validation.ExecutionResult
 import com.ingsis.grupo10.snippet.dto.validation.ValidationResult
+import com.ingsis.grupo10.snippet.exception.SnippetExecutionException
 import com.ingsis.grupo10.snippet.exception.SnippetValidationException
 import com.ingsis.grupo10.snippet.extension.created
 import com.ingsis.grupo10.snippet.extension.toDetailDto
@@ -73,7 +76,9 @@ class SnippetService(
         val validationResult =
             printScriptClient.validateSnippet(
                 code = request.content,
-                version = "1.0",
+                version = "1.0", // fixme: Hardcoded for now ->
+                // La "ui" (eleccion de la version por el usuario),
+                // puede determinar que version del lenguaje querria ejecutar
             )
 
         when (validationResult) {
@@ -473,5 +478,35 @@ class SnippetService(
         val content = assetClient.getAsset(container, key)
 
         return snippet.toUIDetailDto(content, username)
+    }
+
+    fun runSnippet(snippetId: UUID): ExecutionDto {
+        val snippet = snippetRepository.findById(snippetId).orElseThrow { IllegalArgumentException("Snippet not found") }
+
+        val (container, key) = parseCodeUrl(snippet.codeUrl)
+
+        val code = assetClient.getAsset(container, key)
+
+        val executionResult =
+            printScriptClient.executeSnippet(
+                code = code,
+                input = emptyList(),
+                version = snippet.version,
+            )
+
+        when (executionResult) {
+            is ExecutionResult.Success -> {
+                return ExecutionDto(
+                    output = executionResult.output,
+                    errors = emptyList(),
+                )
+            }
+            is ExecutionResult.Failed -> {
+                throw SnippetExecutionException(
+                    "Snippet execution failed",
+                    executionResult.errors,
+                )
+            }
+        }
     }
 }
