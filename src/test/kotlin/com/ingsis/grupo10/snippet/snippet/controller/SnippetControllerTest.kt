@@ -76,7 +76,6 @@ class SnippetControllerTest {
                 codeUrl = codeUrl,
                 language = "PrintScript",
                 version = "1.1",
-                ownerId = UUID.randomUUID(),
                 createdAt = LocalDateTime.now(),
             )
 
@@ -137,14 +136,13 @@ class SnippetControllerTest {
                 id = testId,
                 name = "Updated Snippet",
                 description = "Updated description",
-                codeUrl = "let y: number = 10;", // fixme
+                codeUrl = "snippets/$testId",
                 language = "PrintScript",
                 version = "1.1",
-                ownerId = UUID.randomUUID(),
                 createdAt = LocalDateTime.now(),
             )
 
-        `when`(snippetService.updateSnippet(any(), anyOrNull(), anyOrNull()))
+        `when`(snippetService.updateSnippet(any(), any()))
             .thenReturn(response)
 
         mockMvc
@@ -170,14 +168,13 @@ class SnippetControllerTest {
                 id = testId,
                 name = "Test Snippet",
                 description = "Test",
-                codeUrl = "let x: number = 5;", // fixme
+                codeUrl = "snippets/$testId",
                 language = "PrintScript",
                 version = "1.1",
-                ownerId = UUID.randomUUID(),
                 createdAt = LocalDateTime.now(),
             )
 
-        `when`(snippetService.lintSnippet(any(), anyOrNull()))
+        `when`(snippetService.lintSnippet(any()))
             .thenReturn(response)
 
         mockMvc
@@ -193,14 +190,13 @@ class SnippetControllerTest {
                 id = testId,
                 name = "Test Snippet",
                 description = "Test",
-                codeUrl = "let x: number = 5;", // fixme
+                codeUrl = "snippets/$testId",
                 language = "PrintScript",
                 version = "1.1",
-                ownerId = UUID.randomUUID(),
                 createdAt = LocalDateTime.now(),
             )
 
-        `when`(snippetService.formatSnippet(any(), anyOrNull()))
+        `when`(snippetService.formatSnippet(any()))
             .thenReturn(response)
 
         mockMvc

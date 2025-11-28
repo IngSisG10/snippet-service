@@ -4,6 +4,8 @@ import com.ingsis.grupo10.snippet.dto.Created
 import com.ingsis.grupo10.snippet.dto.SnippetCreateRequest
 import com.ingsis.grupo10.snippet.dto.SnippetDetailDto
 import com.ingsis.grupo10.snippet.dto.SnippetSummaryDto
+import com.ingsis.grupo10.snippet.dto.SnippetUIDetailDto
+import com.ingsis.grupo10.snippet.dto.SnippetUIFormatDto
 import com.ingsis.grupo10.snippet.models.Language
 import com.ingsis.grupo10.snippet.models.Snippet
 import java.time.LocalDateTime
@@ -49,4 +51,23 @@ fun Snippet.toDetailDto(): SnippetDetailDto =
         version = this.version,
         createdAt = this.createdAt,
         codeUrl = this.codeUrl,
+    )
+
+fun Snippet.toUIFormatDto(content: String): SnippetUIFormatDto =
+    SnippetUIFormatDto(
+        content = content,
+    )
+
+fun Snippet.toUIDetailDto(
+    content: String,
+    username: String,
+): SnippetUIDetailDto =
+    SnippetUIDetailDto(
+        id = this.id,
+        name = this.name,
+        content = content,
+        language = this.language.name,
+        extension = "ps",
+        compliance = this.createdAt,
+        author = username,
     )

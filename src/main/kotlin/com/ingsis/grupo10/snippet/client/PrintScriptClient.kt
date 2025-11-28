@@ -28,12 +28,11 @@ class PrintScriptClient(
             val response =
                 webClient
                     .post()
-                    .uri("/api/printscript/verify")
+                    .uri("/api/printscript/verify?version=$version")
                     .contentType(MediaType.MULTIPART_FORM_DATA)
                     .body(
                         BodyInserters
                             .fromMultipartData("snippet", FileSystemResource(tempFilePath.toFile()))
-                            .with("version", version)
                             .with("config", createDefaultLintConfig()), // JSON con reglas
                     ).retrieve()
                     .bodyToMono(LintResultDTO::class.java)
@@ -100,17 +99,19 @@ class PrintScriptClient(
         val tempFilePath = createTempFile(prefix = "snippet", suffix = ".ps")
         tempFilePath.writeText(code)
 
+        val tempConfigPath = createTempFile(prefix = "lint-config", suffix = ".json")
+        tempConfigPath.writeText(lintConfig)
+
         try {
             val response =
                 webClient
                     .post()
-                    .uri("/api/printscript/verify")
+                    .uri("/api/printscript/verify?version=$version")
                     .contentType(MediaType.MULTIPART_FORM_DATA)
                     .body(
                         BodyInserters
                             .fromMultipartData("snippet", FileSystemResource(tempFilePath.toFile()))
-                            .with("version", version)
-                            .with("config", lintConfig),
+                            .with("config", FileSystemResource(tempConfigPath.toFile())),
                     ).retrieve()
                     .bodyToMono(LintResultDTO::class.java)
                     .block() ?: throw RuntimeException("No response from PrintScript service")
@@ -118,6 +119,7 @@ class PrintScriptClient(
             return response
         } finally {
             tempFilePath.deleteExisting()
+            tempConfigPath.deleteExisting()
         }
     }
 
@@ -129,24 +131,27 @@ class PrintScriptClient(
         val tempFilePath = createTempFile(prefix = "snippet", suffix = ".ps")
         tempFilePath.writeText(code)
 
+        val tempConfigPath = createTempFile(prefix = "format-config", suffix = ".json")
+        tempConfigPath.writeText(formatConfig)
+
         try {
-            val response =
+            val formattedCode =
                 webClient
                     .post()
-                    .uri("/api/printscript/format")
+                    .uri("/api/printscript/format?version=$version")
                     .contentType(MediaType.MULTIPART_FORM_DATA)
                     .body(
                         BodyInserters
                             .fromMultipartData("snippet", FileSystemResource(tempFilePath.toFile()))
-                            .with("version", version)
-                            .with("config", formatConfig),
+                            .with("config", FileSystemResource(tempConfigPath.toFile())),
                     ).retrieve()
-                    .bodyToMono(FormatResultDTO::class.java)
+                    .bodyToMono(String::class.java)
                     .block() ?: throw RuntimeException("No response from PrintScript service")
 
-            return response
+            return FormatResultDTO(formattedCode)
         } finally {
             tempFilePath.deleteExisting()
+            tempConfigPath.deleteExisting()
         }
     }
 }

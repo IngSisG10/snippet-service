@@ -71,7 +71,6 @@ class LogServiceTest {
                 language = language,
                 description = "Test",
                 version = "1.1",
-                ownerId = UUID.randomUUID(),
                 createdAt = LocalDateTime.now(),
                 updatedAt = LocalDateTime.now(),
             )

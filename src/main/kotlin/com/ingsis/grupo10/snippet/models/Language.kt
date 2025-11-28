@@ -10,7 +10,8 @@ import java.util.UUID
 data class Language(
     @Id
     val id: UUID,
-    val name: String,
+    val name: String, // PrintScript, Python, Java, Kotlin, etc.
+    // val extension: String // ej: ps, kt, java, py
 )
 
 // Archivos.db

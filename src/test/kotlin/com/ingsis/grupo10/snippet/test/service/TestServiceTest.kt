@@ -65,7 +65,6 @@ class TestServiceTest {
                 language = testLanguage,
                 description = "Test description",
                 version = "1.1",
-                ownerId = UUID.randomUUID(),
                 createdAt = LocalDateTime.now(),
                 updatedAt = LocalDateTime.now(),
             )

@@ -37,7 +37,7 @@ class FormatConfigControllerTest {
         val response =
             FormatConfigResponse(
                 id = UUID.randomUUID(),
-                userId = testUserId,
+                userId = testUserId.toString(),
                 spaceBeforeColon = false,
                 spaceAfterColon = true,
                 spaceAroundEquals = true,
@@ -45,7 +45,7 @@ class FormatConfigControllerTest {
                 indentInsideBlock = 4,
             )
 
-        `when`(formatConfigService.getConfig(testUserId)).thenReturn(response)
+        `when`(formatConfigService.getConfig(testUserId.toString())).thenReturn(response)
 
         mockMvc
             .perform(get("/config/formatting"))
@@ -67,7 +67,7 @@ class FormatConfigControllerTest {
         val response =
             FormatConfigResponse(
                 id = UUID.randomUUID(),
-                userId = testUserId,
+                userId = testUserId.toString(),
                 spaceBeforeColon = true,
                 spaceAfterColon = true,
                 spaceAroundEquals = true,
