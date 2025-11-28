@@ -1,4 +1,11 @@
 FROM gradle:8.7-jdk21-alpine AS builder
+
+ARG GITHUB_ACTOR
+ARG GITHUB_TOKEN
+
+ENV GITHUB_ACTOR=$GITHUB_ACTOR
+ENV GITHUB_TOKEN=$GITHUB_TOKEN
+
 WORKDIR /app
 COPY . .
 RUN sed -i 's/\r$//' gradlew && chmod +x gradlew
