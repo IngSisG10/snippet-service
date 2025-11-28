@@ -155,6 +155,7 @@ class TestService(
 
                 return TestResultResponse(
                     status = if (passed) "success" else "fail",
+                    output = actualOutput,
                 )
             }
         }
