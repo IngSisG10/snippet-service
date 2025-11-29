@@ -319,9 +319,6 @@ class SnippetController(
         return ResponseEntity.ok(snippets)
     }
 
-    // TODO: add share snippet method.
-    // TODO: Add auth verification
-
     // Rules
     @GetMapping("/rules/format")
     fun getFormattingRules(
@@ -341,14 +338,51 @@ class SnippetController(
         return ResponseEntity.ok(rules)
     }
 
+    // fixme: Aca particularmente necesitas el Redis Stream
+    // La idea es que aplique los cambios a cada Snippet que el usuario tenga sin la necesidad de hacerlo manualmente.
+
     @PutMapping("/rules/format")
     fun updateFormattingRules(
         @RequestBody rules: List<RuleDto>,
         @AuthenticationPrincipal jwt: Jwt,
-    ): ResponseEntity<Void> {
-        snippetService.updateFormattingRules(rules, jwt.subject)
+    ): ResponseEntity<Map<String, Any>> {
+        val userId = jwt.subject
 
-        return ResponseEntity.ok().build()
+        try {
+            // Update the formatting rules
+            snippetService.updateFormattingRules(rules, userId)
+
+            // Get owned snippets and queue for formatting
+            val ownedSnippets = authClient.getUserOwnedSnippets(userId)
+
+            var successCount = 0
+            val failedSnippets = mutableListOf<UUID>()
+
+            ownedSnippets.forEach { snippetId ->
+                try {
+                    formatRequestProducer.publishFormatRequest(snippetId.toString())
+                    successCount++
+                } catch (e: Exception) {
+                    failedSnippets.add(snippetId)
+                    println("Failed to queue format request for snippet $snippetId: ${e.message}")
+                }
+            }
+
+            return ResponseEntity
+                .status(HttpStatus.ACCEPTED)
+                .body(
+                    mapOf(
+                        "message" to "Formatting rules updated",
+                        "totalSnippets" to ownedSnippets.size,
+                        "queuedSnippets" to successCount,
+                        "failedSnippets" to failedSnippets.size,
+                    ),
+                )
+        } catch (e: Exception) {
+            return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(mapOf("error" to "Failed to update formatting rules: ${e.message}"))
+        }
     }
 
     @PutMapping("/rules/lint")
