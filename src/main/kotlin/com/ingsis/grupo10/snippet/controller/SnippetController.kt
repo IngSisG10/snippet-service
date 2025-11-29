@@ -44,17 +44,27 @@ class SnippetController(
         @RequestParam page: Int,
         @RequestParam pageSize: Int,
         @RequestParam(required = false, defaultValue = "") name: String?,
+        @RequestParam(required = false, defaultValue = "") compliance: String?,
+        @RequestParam(required = false, defaultValue = "") language: String?,
         @AuthenticationPrincipal jwt: Jwt,
     ): ResponseEntity<PaginatedSnippetsResponse> {
         val username = jwt.getClaimAsString("https://your-app.com/name")
+        val userId = jwt.subject
 
-        val result =
-            snippetService.listSnippetDescriptors(
-                userId = username,
-                page = page,
-                pageSize = pageSize,
-                name = name,
-            )
+        val snippetIds = when (compliance) {
+            "owner" -> authClient.getUserOwnedSnippets(userId)
+            "read" -> authClient.getUserReadSnippets(userId)
+            else -> authClient.getUserAccessibleSnippets(userId) // "all"
+        }
+
+        val result = snippetService.listSnippetDescriptors(
+            userId = username,
+            page = page,
+            pageSize = pageSize,
+            name = name,
+            snippetIds = snippetIds,
+            language = language
+        )
 
         return ResponseEntity.ok(result)
     }

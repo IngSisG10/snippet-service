@@ -313,29 +313,6 @@ class SnippetService(
         return snippet.toUIFormatDto(formatResult.formattedCode)
     }
 
-//    /**
-//     * Gets all snippets owned by a specific user.
-//     *
-//     * @param userId The user ID to filter snippets by
-//     * @return List of snippets owned by the user
-//     */
-// This now gets snippets by querying auth service for user's accessible snippets
-
-//    fun getSnippetsByUser(userId: String): List<SnippetSummaryDto> {
-//        val userSnippets = snippetRepository.findByOwnerId(userId)
-//
-//        return userSnippets.map { snippet ->
-//            val lintStatus = logService.getLatestLintStatus(snippet.id)
-//            SnippetSummaryDto(
-//                id = snippet.id,
-//                name = snippet.name,
-//                language = snippet.language.name,
-//                version = snippet.version,
-//                createdAt = snippet.createdAt,
-//                compliance = lintStatus.status,
-//            )
-//        }
-//    }
 
     // List Descriptors
     fun listSnippetDescriptors(
@@ -343,35 +320,44 @@ class SnippetService(
         page: Int,
         pageSize: Int,
         name: String?,
+        snippetIds: List<UUID>,
+        language: String?
     ): PaginatedSnippetsResponse {
+
+        if (snippetIds.isEmpty()) {
+            return PaginatedSnippetsResponse(
+                page = page,
+                pageSize = pageSize,
+                count = 0,
+                snippets = emptyList(),
+            )
+        }
+
         val pageable = PageRequest.of(page, pageSize)
+        val paginatedResult = snippetRepository.findFilteredSnippets (
+            snippetIds = snippetIds,
+            name = name.takeIf { !it.isNullOrBlank() },
+            language = language.takeIf { !it.isNullOrBlank() },
+            pageable = pageable
+        )
 
-        // TODO: Filter by user's snippets via auth-service if needed
-        val result =
-            snippetRepository
-                .findByNameContainingIgnoreCase(
-                    name ?: "",
-                    pageable,
-                )
-
-        val snippetDtos =
-            result.content.map {
-                SnippetResponse(
-                    id = it.id,
-                    name = it.name,
-                    description = it.description,
-                    language = it.language.name,
-                    version = it.version,
-                    createdAt = it.createdAt.toString(),
-                    author = userId,
-                    compliance = logService.getLatestLintStatus(it.id).status,
-                )
-            }
+        val snippetDtos = paginatedResult.content.map { snippet ->
+            SnippetResponse(
+                id = snippet.id,
+                name = snippet.name,
+                description = snippet.description,
+                language = snippet.language.name,
+                version = snippet.version,
+                createdAt = snippet.createdAt.toString(),
+                author = userId,
+                compliance = logService.getLatestLintStatus(snippet.id).status
+            )
+        }
 
         return PaginatedSnippetsResponse(
             page = page,
             pageSize = pageSize,
-            count = result.totalElements,
+            count = paginatedResult.totalElements,
             snippets = snippetDtos,
         )
     }
