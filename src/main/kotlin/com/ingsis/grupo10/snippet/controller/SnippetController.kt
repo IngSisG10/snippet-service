@@ -10,7 +10,6 @@ import com.ingsis.grupo10.snippet.dto.SnippetUIFormatDto
 import com.ingsis.grupo10.snippet.dto.SnippetUIUpdateRequest
 import com.ingsis.grupo10.snippet.dto.filetype.FileTypeResponse
 import com.ingsis.grupo10.snippet.dto.paginatedsnippets.PaginatedSnippetsResponse
-import com.ingsis.grupo10.snippet.dto.rules.RuleDto
 import com.ingsis.grupo10.snippet.dto.tests.ExecutionDto
 import com.ingsis.grupo10.snippet.producer.FormatRequestProducer
 import com.ingsis.grupo10.snippet.producer.LintRequestProducer
@@ -320,79 +319,6 @@ class SnippetController(
     }
 
     // Rules
-    @GetMapping("/rules/format")
-    fun getFormattingRules(
-        @AuthenticationPrincipal jwt: Jwt,
-    ): ResponseEntity<List<RuleDto>> {
-        val userId = jwt.subject
-        val rules = snippetService.getFormattingRules(userId)
-        return ResponseEntity.ok(rules)
-    }
-
-    @GetMapping("/rules/lint")
-    fun getLintingRules(
-        @AuthenticationPrincipal jwt: Jwt,
-    ): ResponseEntity<List<RuleDto>> {
-        val userId = jwt.subject
-        val rules = snippetService.getLintingRules(userId)
-        return ResponseEntity.ok(rules)
-    }
-
-    // fixme: Aca particularmente necesitas el Redis Stream
-    // La idea es que aplique los cambios a cada Snippet que el usuario tenga sin la necesidad de hacerlo manualmente.
-
-    @PutMapping("/rules/format")
-    fun updateFormattingRules(
-        @RequestBody rules: List<RuleDto>,
-        @AuthenticationPrincipal jwt: Jwt,
-    ): ResponseEntity<Map<String, Any>> {
-        val userId = jwt.subject
-
-        try {
-            // Update the formatting rules
-            snippetService.updateFormattingRules(rules, userId)
-
-            // Get owned snippets and queue for formatting
-            val ownedSnippets = authClient.getUserOwnedSnippets(userId)
-
-            var successCount = 0
-            val failedSnippets = mutableListOf<UUID>()
-
-            ownedSnippets.forEach { snippetId ->
-                try {
-                    formatRequestProducer.publishFormatRequest(snippetId.toString())
-                    successCount++
-                } catch (e: Exception) {
-                    failedSnippets.add(snippetId)
-                    println("Failed to queue format request for snippet $snippetId: ${e.message}")
-                }
-            }
-
-            return ResponseEntity
-                .status(HttpStatus.ACCEPTED)
-                .body(
-                    mapOf(
-                        "message" to "Formatting rules updated",
-                        "totalSnippets" to ownedSnippets.size,
-                        "queuedSnippets" to successCount,
-                        "failedSnippets" to failedSnippets.size,
-                    ),
-                )
-        } catch (e: Exception) {
-            return ResponseEntity
-                .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(mapOf("error" to "Failed to update formatting rules: ${e.message}"))
-        }
-    }
-
-    @PutMapping("/rules/lint")
-    fun updateLintingRules(
-        @RequestBody rules: Map<String, Any>,
-        @AuthenticationPrincipal jwt: Jwt,
-    ): ResponseEntity<Void> {
-        snippetService.updateLintingRules(rules, jwt.subject)
-        return ResponseEntity.ok().build()
-    }
 
     // File types
     @GetMapping("/filetypes")

@@ -1,8 +1,8 @@
 package com.ingsis.grupo10.snippet.service
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.ingsis.grupo10.snippet.dto.formatconfig.FormatConfigRequest
-import com.ingsis.grupo10.snippet.dto.formatconfig.FormatConfigResponse
+import com.ingsis.grupo10.snippet.dto.rules.RuleConfigRequest
+import com.ingsis.grupo10.snippet.dto.rules.RuleConfigResponse
 import com.ingsis.grupo10.snippet.models.FormatConfig
 import com.ingsis.grupo10.snippet.repository.FormatConfigRepository
 import org.springframework.stereotype.Service
@@ -13,7 +13,7 @@ class FormatConfigService(
     private val formatConfigRepository: FormatConfigRepository,
     private val objectMapper: ObjectMapper,
 ) {
-    fun getConfig(userId: String): FormatConfigResponse {
+    fun getConfig(userId: String): List<RuleConfigResponse> {
         val config =
             formatConfigRepository.findByUserId(userId)
                 ?: createDefaultConfig(userId)
@@ -23,8 +23,8 @@ class FormatConfigService(
 
     fun updateConfig(
         userId: String,
-        request: FormatConfigRequest,
-    ): FormatConfigResponse {
+        request: List<RuleConfigRequest>,
+    ): List<RuleConfigResponse> {
         val existingConfig = formatConfigRepository.findByUserId(userId)
 
         val configJson = buildConfigJson(request)
@@ -49,58 +49,60 @@ class FormatConfigService(
         return parseConfigToResponse(config)
     }
 
-    fun getConfigJson(userId: String): String {
-        val config =
-            formatConfigRepository.findByUserId(userId)
-                ?: createDefaultConfig(userId)
-
-        return config.config
-    }
+//    fun getConfigJson(userId: String): String {
+//        val config =
+//            formatConfigRepository.findByUserId(userId)
+//                ?: createDefaultConfig(userId)
+//
+//        return config.config
+//    }
 
     private fun createDefaultConfig(userId: String): FormatConfig {
-        val defaultJson =
-            """
-            {
-                "space_before_colon": false,
-                "space_after_colon": true,
-                "space_around_equals": true,
-                "newline_before_println": 1,
-                "indent_inside_block": 4
-            }
-            """.trimIndent()
+        val defaultConfig =
+            mapOf(
+                "space_before_colon" to mapOf("value" to false, "isActive" to true),
+                "space_after_colon" to mapOf("value" to true, "isActive" to true),
+                "space_around_equals" to mapOf("value" to true, "isActive" to true),
+                "newline_before_println" to mapOf("value" to 1, "isActive" to true),
+                "indent_inside_block" to mapOf("value" to 4, "isActive" to true),
+            )
+
+        val json = objectMapper.writeValueAsString(defaultConfig)
 
         return formatConfigRepository.save(
             FormatConfig(
                 id = UUID.randomUUID(),
                 userId = userId,
-                config = defaultJson,
+                config = json,
             ),
         )
     }
 
-    private fun buildConfigJson(request: FormatConfigRequest): String {
-        val configMap = mutableMapOf<String, Any>()
-
-        request.spaceBeforeColon?.let { configMap["space_before_colon"] = it }
-        request.spaceAfterColon?.let { configMap["space_after_colon"] = it }
-        request.spaceAroundEquals?.let { configMap["space_around_equals"] = it }
-        request.newlineBeforePrintln?.let { configMap["newline_before_println"] = it }
-        request.indentInsideBlock?.let { configMap["indent_inside_block"] = it }
+    private fun buildConfigJson(request: List<RuleConfigRequest>): String {
+        val configMap =
+            request.associate { rule ->
+                rule.id to
+                    mapOf(
+                        "value" to rule.value,
+                        "isActive" to rule.isActive,
+                    )
+            }
 
         return objectMapper.writeValueAsString(configMap)
     }
 
-    private fun parseConfigToResponse(config: FormatConfig): FormatConfigResponse {
-        val configMap = objectMapper.readValue(config.config, Map::class.java)
+    private fun parseConfigToResponse(config: FormatConfig): List<RuleConfigResponse> {
+        val configMap =
+            objectMapper.readValue(config.config, Map::class.java)
+                as Map<String, Map<String, Any?>>
 
-        return FormatConfigResponse(
-            id = config.id,
-            userId = config.userId,
-            spaceBeforeColon = configMap["space_before_colon"] as? Boolean,
-            spaceAfterColon = configMap["space_after_colon"] as? Boolean,
-            spaceAroundEquals = configMap["space_around_equals"] as? Boolean,
-            newlineBeforePrintln = (configMap["newline_before_println"] as? Number)?.toInt(),
-            indentInsideBlock = (configMap["indent_inside_block"] as? Number)?.toInt(),
-        )
+        return configMap.map { (key, ruleData) ->
+            RuleConfigResponse(
+                id = key,
+                name = key.split("_").joinToString(" ") { it.replaceFirstChar(Char::uppercase) },
+                isActive = ruleData["isActive"] as? Boolean ?: true,
+                value = ruleData["value"],
+            )
+        }
     }
 }
