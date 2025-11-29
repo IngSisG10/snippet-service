@@ -2,6 +2,7 @@ package com.ingsis.grupo10.snippet.service
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.ingsis.grupo10.snippet.client.AssetClient
+import com.ingsis.grupo10.snippet.client.AuthClient
 import com.ingsis.grupo10.snippet.client.PrintScriptClient
 import com.ingsis.grupo10.snippet.dto.Created
 import com.ingsis.grupo10.snippet.dto.SnippetDetailDto
@@ -38,6 +39,7 @@ class SnippetService(
     private val languageRepository: LanguageRepository,
     private val printScriptClient: PrintScriptClient,
     private val assetClient: AssetClient,
+    private val authClient: AuthClient,
     private val logService: LogService,
     private val lintConfigService: LintConfigService,
     private val formatConfigService: FormatConfigService,
@@ -446,4 +448,29 @@ class SnippetService(
                 extension = "ps", // Hardcoded for now FIXME!
             )
         }
+
+    fun shareSnippet(
+        username: String,
+        snippetId: UUID,
+        targetUserEmail: String,
+    ): SnippetUIDetailDto {
+        val snippet =
+            snippetRepository.findById(snippetId).orElseThrow { IllegalArgumentException("Snippet not found") }
+
+        val isShareSuccessful =
+            authClient.shareSnippet(
+                snippetId = snippetId,
+                targetUserEmail = targetUserEmail,
+            )
+
+        if (!isShareSuccessful) {
+            throw IllegalStateException("Failed to share snippet")
+        }
+
+        val (container, key) = parseCodeUrl(snippet.codeUrl)
+
+        val content = assetClient.getAsset(container, key)
+
+        return snippet.toUIDetailDto(content, username)
+    }
 }
