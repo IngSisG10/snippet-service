@@ -191,7 +191,7 @@ class PrintScriptClient(
                     .body(
                         BodyInserters
                             .fromMultipartData("snippet", FileSystemResource(tempFilePath.toFile()))
-                            .with("config", FileSystemResource(tempConfigPath.toFile())),
+                            .with("config", FileSystemResource(tempConfigPath.toFile())), // fixme -> getFormatConfigRules()
                     ).retrieve()
                     .bodyToMono(String::class.java)
                     .block() ?: throw RuntimeException("No response from PrintScript service")
