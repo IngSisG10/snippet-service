@@ -21,6 +21,10 @@ services:
       SERVICE_API_KEY: ${SERVICE_API_KEY}
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      NEW_RELIC_APP_NAME: snippet-service-local
+      NEW_RELIC_LICENSE_KEY: ${NEW_RELIC_LICENSE_KEY}
+      NEW_RELIC_AGENT_ENABLED: ${NEW_RELIC_AGENT_ENABLED}
+      NEW_RELIC_DISTRIBUTED_TRACING_ENABLED: ${NEW_RELIC_DISTRIBUTED_TRACING_ENABLED}
     depends_on:
       - db
       - asset-service
@@ -92,6 +96,10 @@ services:
       AUTH0_AUDIENCE: https://my-api-identifier
       AUTH_SERVER_URI: dev-rhvn1b43rtt1hdap.us.auth0.com/
       SERVICE_API_KEY: ${SERVICE_API_KEY}
+      NEW_RELIC_APP_NAME: auth-service-local
+      NEW_RELIC_LICENSE_KEY: ${NEW_RELIC_LICENSE_KEY}
+      NEW_RELIC_AGENT_ENABLED: ${NEW_RELIC_AGENT_ENABLED}
+      NEW_RELIC_DISTRIBUTED_TRACING_ENABLED: ${NEW_RELIC_DISTRIBUTED_TRACING_ENABLED}
     depends_on:
       - auth-db
     networks:
@@ -118,6 +126,11 @@ services:
     container_name: printscript-service
     ports:
       - "8080:8080"
+    environment:
+      NEW_RELIC_APP_NAME: printscript-service-local
+      NEW_RELIC_LICENSE_KEY: ${NEW_RELIC_LICENSE_KEY}
+      NEW_RELIC_AGENT_ENABLED: ${NEW_RELIC_AGENT_ENABLED}
+      NEW_RELIC_DISTRIBUTED_TRACING_ENABLED: ${NEW_RELIC_DISTRIBUTED_TRACING_ENABLED}
     networks:
       - shared_network
 
