@@ -3,7 +3,8 @@ package com.ingsis.grupo10.snippet.snippet.service
 import com.ingsis.grupo10.snippet.client.AssetClient
 import com.ingsis.grupo10.snippet.client.CreatedResult
 import com.ingsis.grupo10.snippet.client.PrintScriptClient
-import com.ingsis.grupo10.snippet.dto.SnippetCreateRequest
+import com.ingsis.grupo10.snippet.dto.SnippetUICreateRequest
+import com.ingsis.grupo10.snippet.dto.SnippetUIUpdateRequest
 import com.ingsis.grupo10.snippet.dto.validation.ValidationError
 import com.ingsis.grupo10.snippet.dto.validation.ValidationResult
 import com.ingsis.grupo10.snippet.exception.SnippetValidationException
@@ -54,9 +55,11 @@ class SnippetServiceTest {
                 languageRepository,
                 printScriptClient,
                 assetClient,
+                mockk(), // authClient
                 logService,
                 lintConfigService,
                 formatConfigService,
+                mockk(), // objectMapper
             )
     }
 
@@ -205,25 +208,24 @@ class SnippetServiceTest {
     fun `updateSnippet should update snippet successfully`() {
         val snippetId = UUID.randomUUID()
         val existingSnippet = createTestSnippet(snippetId)
-        val request = createTestRequest(name = "Updated Snippet")
-        val updatedSnippet = createTestSnippet(snippetId, name = "Updated Snippet")
+        val request = SnippetUIUpdateRequest(content = "let y: number = 10;")
+        val updatedSnippet = createTestSnippet(snippetId, name = "Test Snippet")
 
         every { snippetRepository.findById(snippetId) } returns Optional.of(existingSnippet)
         every { printScriptClient.validateSnippet(any(), any()) } returns ValidationResult.Success
-        every { languageRepository.findByName("printscript") } returns testLanguage
         every { snippetRepository.save(any()) } returns updatedSnippet
         every { assetClient.createAsset("snippets", any(), any()) } returns CreatedResult.Success("/snippets/fake-key")
 
         val result = snippetService.updateSnippet(snippetId, request)
 
-        assertEquals("Updated Snippet", result.name)
+        assertEquals(snippetId, result.id)
         verify { snippetRepository.save(any()) }
     }
 
     @Test
     fun `updateSnippet should throw exception when snippet not found`() {
         val snippetId = UUID.randomUUID()
-        val request = createTestRequest()
+        val request = SnippetUIUpdateRequest(content = "let x: number = 5;")
 
         every { snippetRepository.findById(snippetId) } returns Optional.empty()
 
@@ -308,7 +310,7 @@ class SnippetServiceTest {
 
         val result = snippetService.formatSnippet(snippetId)
 
-        assertEquals(snippet.id, result.id)
+        assertEquals(formatted, result.content)
         verify { printScriptClient.formatSnippet(any(), any(), eq("""{"enforce-spacing-around-equals": true}""")) }
         verify { assetClient.createAsset("snippets", snippetId.toString(), formatted) }
         verify { logService.logFormatting(any(), eq(formatted), any()) }
@@ -346,12 +348,11 @@ class SnippetServiceTest {
     private fun createTestRequest(
         name: String = "Test Snippet",
         languageName: String = "printscript",
-    ): SnippetCreateRequest =
-        SnippetCreateRequest(
+    ): SnippetUICreateRequest =
+        SnippetUICreateRequest(
             name = name,
-            description = "Test description",
-            code = "let x: number = 5;",
-            languageName = languageName,
-            version = "1.0",
+            content = "let x: number = 5;",
+            extension = "ps",
+            language = languageName,
         )
 }

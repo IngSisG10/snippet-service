@@ -11,6 +11,7 @@ import org.mockito.kotlin.any
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
 import org.springframework.http.MediaType
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
@@ -48,7 +49,7 @@ class FormatConfigControllerTest {
         `when`(formatConfigService.getConfig(testUserId.toString())).thenReturn(response)
 
         mockMvc
-            .perform(get("/config/formatting"))
+            .perform(get("/config/formatting").with(jwt().jwt { it.subject(testUserId.toString()) }))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.userId").value(testUserId.toString()))
             .andExpect(jsonPath("$.spaceBeforeColon").value(false))
@@ -81,6 +82,7 @@ class FormatConfigControllerTest {
         mockMvc
             .perform(
                 put("/config/formatting")
+                    .with(jwt().jwt { it.subject(testUserId.toString()) })
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(request)),
             ).andExpect(status().isOk)

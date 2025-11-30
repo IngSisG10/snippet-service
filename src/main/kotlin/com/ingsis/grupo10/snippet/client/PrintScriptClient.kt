@@ -1,5 +1,7 @@
 package com.ingsis.grupo10.snippet.client
 
+import com.ingsis.grupo10.snippet.dto.validation.ExecutionError
+import com.ingsis.grupo10.snippet.dto.validation.ExecutionResult
 import com.ingsis.grupo10.snippet.dto.validation.FormatResultDTO
 import com.ingsis.grupo10.snippet.dto.validation.LintResultDTO
 import com.ingsis.grupo10.snippet.dto.validation.ValidationError
@@ -52,6 +54,51 @@ class PrintScriptClient(
                     },
                 )
             }
+        } finally {
+            tempFilePath.deleteExisting()
+        }
+    }
+
+    // todo: ver como nuestra implementacion de printscript
+    // manejaria particularmente los inputs y outputs
+
+    fun executeSnippet(
+        code: String,
+        input: List<String>?,
+        version: String,
+    ): ExecutionResult {
+        val tempFilePath = createTempFile(prefix = "snippet", suffix = ".ps")
+        tempFilePath.writeText(code)
+
+        try {
+            val rawResponse =
+                webClient
+                    .post()
+                    .uri("/api/printscript/execute?version=$version")
+                    .contentType(MediaType.MULTIPART_FORM_DATA)
+                    .body(
+                        BodyInserters
+                            .fromMultipartData("snippet", FileSystemResource(tempFilePath.toFile()))
+                            .with("config", createDefaultLintConfig()), // JSON con reglas
+                    ).retrieve()
+                    .bodyToMono(String::class.java)
+                    .block() ?: throw RuntimeException("No response from PrintScript service")
+
+            // Si el servicio pone "Error: ..." en el body cuando falla:
+            if (rawResponse.startsWith("Error:")) {
+                return ExecutionResult.Failed(
+                    listOf(ExecutionError(message = rawResponse.removePrefix("Error:").trim())),
+                )
+            }
+
+            // Separar por líneas -> lista de strings
+            val outputLines =
+                rawResponse
+                    .lines()
+                    .map { it.trimEnd() }
+                    .filter { it.isNotEmpty() } // opcional
+
+            return ExecutionResult.Success(output = outputLines)
         } finally {
             tempFilePath.deleteExisting()
         }

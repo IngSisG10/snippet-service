@@ -4,8 +4,7 @@ import java.util.UUID
 
 data class TestResponseDto(
     val id: UUID,
-    val snippetId: UUID,
     val name: String,
-    val inputs: String,
-    val expectedOutputs: String,
+    val input: List<String> = emptyList(),
+    val output: List<String> = emptyList(),
 )

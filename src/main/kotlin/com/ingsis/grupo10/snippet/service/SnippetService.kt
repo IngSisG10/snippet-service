@@ -2,6 +2,7 @@ package com.ingsis.grupo10.snippet.service
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.ingsis.grupo10.snippet.client.AssetClient
+import com.ingsis.grupo10.snippet.client.AuthClient
 import com.ingsis.grupo10.snippet.client.PrintScriptClient
 import com.ingsis.grupo10.snippet.dto.Created
 import com.ingsis.grupo10.snippet.dto.SnippetDetailDto
@@ -16,7 +17,10 @@ import com.ingsis.grupo10.snippet.dto.lintconfig.LintConfigRequest
 import com.ingsis.grupo10.snippet.dto.paginatedsnippets.PaginatedSnippetsResponse
 import com.ingsis.grupo10.snippet.dto.paginatedsnippets.SnippetResponse
 import com.ingsis.grupo10.snippet.dto.rules.RuleDto
+import com.ingsis.grupo10.snippet.dto.tests.ExecutionDto
+import com.ingsis.grupo10.snippet.dto.validation.ExecutionResult
 import com.ingsis.grupo10.snippet.dto.validation.ValidationResult
+import com.ingsis.grupo10.snippet.exception.SnippetExecutionException
 import com.ingsis.grupo10.snippet.exception.SnippetValidationException
 import com.ingsis.grupo10.snippet.extension.created
 import com.ingsis.grupo10.snippet.extension.toDetailDto
@@ -38,16 +42,14 @@ class SnippetService(
     private val languageRepository: LanguageRepository,
     private val printScriptClient: PrintScriptClient,
     private val assetClient: AssetClient,
+    private val authClient: AuthClient,
     private val logService: LogService,
     private val lintConfigService: LintConfigService,
     private val formatConfigService: FormatConfigService,
     private val objectMapper: ObjectMapper,
 ) {
     fun getSnippetById(id: UUID): SnippetDetailDto {
-        val snippet =
-            snippetRepository
-                .findById(id)
-                .orElseThrow { IllegalArgumentException("Snippet not found") }
+        val snippet = snippetRepository.findById(id).orElseThrow { IllegalArgumentException("Snippet not found") }
 
         return snippet.toDetailDto()
     }
@@ -56,10 +58,7 @@ class SnippetService(
         id: UUID,
         username: String,
     ): SnippetUIDetailDto {
-        val snippet =
-            snippetRepository
-                .findById(id)
-                .orElseThrow { IllegalArgumentException("Snippet not found") }
+        val snippet = snippetRepository.findById(id).orElseThrow { IllegalArgumentException("Snippet not found") }
 
         val content =
             run {
@@ -77,7 +76,9 @@ class SnippetService(
         val validationResult =
             printScriptClient.validateSnippet(
                 code = request.content,
-                version = "1.0",
+                version = "1.0", // fixme: Hardcoded for now ->
+                // La "ui" (eleccion de la version por el usuario),
+                // puede determinar que version del lenguaje querria ejecutar
             )
 
         when (validationResult) {
@@ -170,24 +171,28 @@ class SnippetService(
                     } else {
                         snippets.sortedBy { it.name }
                     }
+
                 "language" ->
                     if (sortDirection?.uppercase() == "DESC") {
                         snippets.sortedByDescending { it.language }
                     } else {
                         snippets.sortedBy { it.language }
                     }
+
                 "compliance" ->
                     if (sortDirection?.uppercase() == "DESC") {
                         snippets.sortedByDescending { it.compliance ?: "" }
                     } else {
                         snippets.sortedBy { it.compliance ?: "" }
                     }
+
                 "createdat" ->
                     if (sortDirection?.uppercase() == "DESC") {
                         snippets.sortedByDescending { it.createdAt }
                     } else {
                         snippets.sortedBy { it.createdAt }
                     }
+
                 else -> snippets // No sorting or default order
             }
 
@@ -195,10 +200,7 @@ class SnippetService(
     }
 
     fun deleteSnippetById(id: UUID) {
-        val snippet =
-            snippetRepository
-                .findById(id)
-                .orElseThrow { IllegalArgumentException("Snippet not found") }
+        val snippet = snippetRepository.findById(id).orElseThrow { IllegalArgumentException("Snippet not found") }
 
         snippetRepository.deleteById(id)
     }
@@ -208,9 +210,7 @@ class SnippetService(
         request: SnippetUIUpdateRequest,
     ): SnippetDetailDto {
         val existingSnippet =
-            snippetRepository
-                .findById(id)
-                .orElseThrow { IllegalArgumentException("Snippet not found") }
+            snippetRepository.findById(id).orElseThrow { IllegalArgumentException("Snippet not found") }
 
         val validationResult =
             printScriptClient.validateSnippet(
@@ -258,10 +258,7 @@ class SnippetService(
 
     @Transactional
     fun lintSnippet(id: UUID): SnippetDetailDto {
-        val snippet =
-            snippetRepository
-                .findById(id)
-                .orElseThrow { IllegalArgumentException("Snippet not found") }
+        val snippet = snippetRepository.findById(id).orElseThrow { IllegalArgumentException("Snippet not found") }
 
         // TODO: Get user-specific lint config - for now use default
         val lintConfig = "{}" // Default config
@@ -285,10 +282,7 @@ class SnippetService(
 
     @Transactional
     fun formatSnippet(id: UUID): SnippetUIFormatDto {
-        val snippet =
-            snippetRepository
-                .findById(id)
-                .orElseThrow { IllegalArgumentException("Snippet not found") }
+        val snippet = snippetRepository.findById(id).orElseThrow { IllegalArgumentException("Snippet not found") }
 
         // TODO: Get user-specific format config - for now use default
         val formatConfig = """{"enforce-spacing-around-equals": true}"""
@@ -338,6 +332,7 @@ class SnippetService(
 //    }
 
     // List Descriptors
+    // fixme: manejar casos en los cuales no tenemos "PaginatedSnippets" que mostrar.
     fun listSnippetDescriptors(
         userId: String,
         page: Int,
@@ -348,11 +343,10 @@ class SnippetService(
 
         // TODO: Filter by user's snippets via auth-service if needed
         val result =
-            snippetRepository
-                .findByNameContainingIgnoreCase(
-                    name ?: "",
-                    pageable,
-                )
+            snippetRepository.findByNameContainingIgnoreCase(
+                name ?: "",
+                pageable,
+            )
 
         val snippetDtos =
             result.content.map {
@@ -460,4 +454,59 @@ class SnippetService(
                 extension = "ps", // Hardcoded for now FIXME!
             )
         }
+
+    fun shareSnippet(
+        username: String,
+        snippetId: UUID,
+        targetUserEmail: String,
+    ): SnippetUIDetailDto {
+        val snippet =
+            snippetRepository.findById(snippetId).orElseThrow { IllegalArgumentException("Snippet not found") }
+
+        val isShareSuccessful =
+            authClient.shareSnippet(
+                snippetId = snippetId,
+                targetUserEmail = targetUserEmail,
+            )
+
+        if (!isShareSuccessful) {
+            throw IllegalStateException("Failed to share snippet")
+        }
+
+        val (container, key) = parseCodeUrl(snippet.codeUrl)
+
+        val content = assetClient.getAsset(container, key)
+
+        return snippet.toUIDetailDto(content, username)
+    }
+
+    fun runSnippet(snippetId: UUID): ExecutionDto {
+        val snippet = snippetRepository.findById(snippetId).orElseThrow { IllegalArgumentException("Snippet not found") }
+
+        val (container, key) = parseCodeUrl(snippet.codeUrl)
+
+        val code = assetClient.getAsset(container, key)
+
+        val executionResult =
+            printScriptClient.executeSnippet(
+                code = code,
+                input = emptyList(),
+                version = snippet.version,
+            )
+
+        when (executionResult) {
+            is ExecutionResult.Success -> {
+                return ExecutionDto(
+                    output = executionResult.output,
+                    errors = emptyList(),
+                )
+            }
+            is ExecutionResult.Failed -> {
+                throw SnippetExecutionException(
+                    "Snippet execution failed",
+                    executionResult.errors,
+                )
+            }
+        }
+    }
 }

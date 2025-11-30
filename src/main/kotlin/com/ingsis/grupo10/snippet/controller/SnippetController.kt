@@ -1,6 +1,7 @@
 package com.ingsis.grupo10.snippet.controller
 
 import com.ingsis.grupo10.snippet.client.AuthClient
+import com.ingsis.grupo10.snippet.dto.GrantPermissionRequest
 import com.ingsis.grupo10.snippet.dto.SnippetDetailDto
 import com.ingsis.grupo10.snippet.dto.SnippetSummaryDto
 import com.ingsis.grupo10.snippet.dto.SnippetUICreateRequest
@@ -10,11 +11,10 @@ import com.ingsis.grupo10.snippet.dto.SnippetUIUpdateRequest
 import com.ingsis.grupo10.snippet.dto.filetype.FileTypeResponse
 import com.ingsis.grupo10.snippet.dto.paginatedsnippets.PaginatedSnippetsResponse
 import com.ingsis.grupo10.snippet.dto.rules.RuleDto
-import com.ingsis.grupo10.snippet.models.Test
+import com.ingsis.grupo10.snippet.dto.tests.ExecutionDto
 import com.ingsis.grupo10.snippet.producer.FormatRequestProducer
 import com.ingsis.grupo10.snippet.producer.LintRequestProducer
 import com.ingsis.grupo10.snippet.service.SnippetService
-import com.ingsis.grupo10.snippet.service.TestCaseService
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
@@ -34,7 +34,6 @@ import java.util.UUID
 @RequestMapping("/snippets")
 class SnippetController(
     private val snippetService: SnippetService,
-    private val testCaseService: TestCaseService,
     private val authClient: AuthClient,
     private val lintRequestProducer: LintRequestProducer,
     private val formatRequestProducer: FormatRequestProducer,
@@ -361,34 +360,37 @@ class SnippetController(
         return ResponseEntity.ok().build()
     }
 
-    // todo: Test Cases
-
-    @GetMapping("/testcases")
-    fun getTestCases(): ResponseEntity<List<Test>> {
-        val testCases = testCaseService.getTestCases()
-        return ResponseEntity.ok(testCases)
-    }
-
-    @PostMapping("/testcases")
-    fun postTestCase(
-        @RequestBody testCases: Test,
-    ): ResponseEntity<Void> {
-        testCaseService.postTestCase(testCases)
-        return ResponseEntity.ok().build()
-    }
-
-    @DeleteMapping("/testcases/{id}")
-    fun removeTestCase(
-        @PathVariable id: UUID,
-    ): ResponseEntity<Void> {
-        testCaseService.removeTestCase(id)
-        return ResponseEntity.ok().build()
-    }
-
     // File types
     @GetMapping("/filetypes")
     fun getSupportedFileTypes(): ResponseEntity<List<FileTypeResponse>> {
         val fileTypes = snippetService.getSupportedFileTypes()
         return ResponseEntity.ok(fileTypes)
+    }
+
+    @PostMapping("/share")
+    fun shareSnippet(
+        @AuthenticationPrincipal jwt: Jwt,
+        @RequestBody request: GrantPermissionRequest,
+    ): ResponseEntity<SnippetUIDetailDto> {
+        val userId = jwt.subject
+        val username = jwt.getClaimAsString("https://your-app.com/name")
+
+        val hasOwnerPermission = authClient.checkPermission(request.snippetId, userId, "OWNER")
+
+        if (!hasOwnerPermission) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
+        }
+
+        val response = snippetService.shareSnippet(username, request.snippetId, request.targetUserEmail)
+
+        return ResponseEntity.ok(response)
+    }
+
+    @PostMapping("/run/{id}")
+    fun runSnippet(
+        @PathVariable id: UUID,
+    ): ResponseEntity<ExecutionDto> {
+        val response = snippetService.runSnippet(id)
+        return ResponseEntity.ok(response)
     }
 }
