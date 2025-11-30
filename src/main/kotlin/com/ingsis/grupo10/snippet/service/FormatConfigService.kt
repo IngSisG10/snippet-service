@@ -54,7 +54,18 @@ class FormatConfigService(
             formatConfigRepository.findByUserId(userId)
                 ?: createDefaultConfig(userId)
 
-        return config.config
+        // Parse the stored config: {"rule-name": {"value": X, "isActive": Y}}
+        val configMap =
+            objectMapper.readValue(config.config, Map::class.java)
+                as Map<String, Map<String, Any?>>
+
+        // Transform to printscript format: {"rule-name": X} (only active rules)
+        val simplifiedConfig =
+            configMap
+                .filter { (_, ruleData) -> ruleData["isActive"] as? Boolean ?: true }
+                .mapValues { (_, ruleData) -> ruleData["value"] }
+
+        return objectMapper.writeValueAsString(simplifiedConfig)
     }
 
     // todo: que agarre las rules de printscript
@@ -73,11 +84,7 @@ class FormatConfigService(
                 "enforce-spacing-after-colon-in-declaration" to mapOf("value" to true, "isActive" to true),
                 "enforce-spacing-around-equals" to mapOf("value" to true, "isActive" to true),
                 "mandatory-space-surrounding-operations" to mapOf("value" to true, "isActive" to true),
-                "space_before_and_after_equal" to mapOf("value" to true, "isActive" to true),
-                "mandatory-space-surrounding-operations" to mapOf("value" to true, "isActive" to true),
                 "enforce-spacing-before-colon-in-declaration" to mapOf("value" to true, "isActive" to true),
-                "enforce-spacing-around-equals" to mapOf("value" to true, "isActive" to true),
-                "mandatory-space-surrounding-operations" to mapOf("value" to true, "isActive" to true),
             )
 
         val json = objectMapper.writeValueAsString(defaultConfig)

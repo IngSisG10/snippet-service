@@ -26,7 +26,18 @@ class LintConfigService(
             lintConfigRepository.findByUserId(userId)
                 ?: createDefaultConfig(userId)
 
-        return config.config
+        // Parse the stored config: {"rule-name": {"value": X, "isActive": Y}}
+        val configMap =
+            objectMapper.readValue(config.config, Map::class.java)
+                as Map<String, Map<String, Any?>>
+
+        // Transform to printscript format: {"rule-name": X} (only active rules)
+        val simplifiedConfig =
+            configMap
+                .filter { (_, ruleData) -> ruleData["isActive"] as? Boolean ?: true }
+                .mapValues { (_, ruleData) -> ruleData["value"] }
+
+        return objectMapper.writeValueAsString(simplifiedConfig)
     }
 
     fun updateConfig(
