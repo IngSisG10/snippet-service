@@ -68,12 +68,23 @@ class LintConfigService(
         return parseConfigToResponse(config)
     }
 
+    // todo: add other rules of linting
     private fun createDefaultConfig(userId: String): LintConfig {
         val defaultConfig =
             mapOf(
                 "identifier_format" to
                     mapOf(
-                        "value" to "camel case",
+                        "value" to "camel case", // "puede cambiarse a snake case, pascal case"
+                        "isActive" to true,
+                    ),
+                "mandatory-variable-or-literal-in-println" to
+                    mapOf(
+                        "value" to true,
+                        "isActive" to true,
+                    ),
+                "mandatory-variable-or-literal-in-readInput" to
+                    mapOf(
+                        "value" to true,
                         "isActive" to true,
                     ),
             )
