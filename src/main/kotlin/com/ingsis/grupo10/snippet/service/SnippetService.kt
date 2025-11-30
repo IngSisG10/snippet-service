@@ -344,6 +344,9 @@ class SnippetService(
         )
 
         val snippetDtos = paginatedResult.content.map { snippet ->
+
+            val ownerInfo = authClient.getSnippetOwner(snippet.id)
+
             SnippetResponse(
                 id = snippet.id,
                 name = snippet.name,
@@ -351,7 +354,7 @@ class SnippetService(
                 language = snippet.language.name,
                 version = snippet.version,
                 createdAt = snippet.createdAt.toString(),
-                author = userId,
+                author = ownerInfo?.ownerName ?: "Unknown",
                 compliance = logService.getLatestLintStatus(snippet.id).status
             )
         }
