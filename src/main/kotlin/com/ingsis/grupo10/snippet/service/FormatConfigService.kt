@@ -1,6 +1,7 @@
 package com.ingsis.grupo10.snippet.service
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.ingsis.grupo10.snippet.client.PrintScriptClient
 import com.ingsis.grupo10.snippet.dto.rules.RuleConfigRequest
 import com.ingsis.grupo10.snippet.dto.rules.RuleConfigResponse
 import com.ingsis.grupo10.snippet.models.FormatConfig
@@ -11,6 +12,7 @@ import java.util.UUID
 @Service
 class FormatConfigService(
     private val formatConfigRepository: FormatConfigRepository,
+    private val printScriptClient: PrintScriptClient,
     private val objectMapper: ObjectMapper,
 ) {
     fun getConfig(userId: String): List<RuleConfigResponse> {
@@ -27,6 +29,7 @@ class FormatConfigService(
     ): List<RuleConfigResponse> {
         val existingConfig = formatConfigRepository.findByUserId(userId)
 
+        // fixme
         val configJson = buildConfigJson(request) // "enforce-spacing-around-equals": {"value": true, "isActive": true}
 
         val config =
@@ -72,20 +75,20 @@ class FormatConfigService(
     // todo: mockearlo con los nombres que deben ser
     private fun createDefaultConfig(userId: String): FormatConfig {
         // for now we need 1.0 version of default config
-        val defaultConfig = // todo -> luego api de printscript-service que da el mapOf
-            mapOf(
-//                "if-brace-below-line" to mapOf("value" to false, "isActive" to true),
-//                "if-brace-same-line" to mapOf("value" to false, "isActive" to true),
-//                "indent-inside-if" to mapOf("value" to 2, "isActive" to true),
-//                "mandatory-line-break-after-statement" to mapOf("value" to true, "isActive" to true),
-                "line-breaks-after-println" to mapOf("value" to 1, "isActive" to true),
-                "mandatory-single-space-separation" to mapOf("value" to true, "isActive" to true),
-                "enforce-no-spacing-around-equals" to mapOf("value" to true, "isActive" to true),
-                "enforce-spacing-after-colon-in-declaration" to mapOf("value" to true, "isActive" to true),
-                "enforce-spacing-around-equals" to mapOf("value" to true, "isActive" to true),
-                "mandatory-space-surrounding-operations" to mapOf("value" to true, "isActive" to true),
-                "enforce-spacing-before-colon-in-declaration" to mapOf("value" to true, "isActive" to true),
-            )
+        val defaultConfig = printScriptClient.getFormatConfigRules(userId)
+//            mapOf(
+// //                "if-brace-below-line" to mapOf("value" to false, "isActive" to true),
+// //                "if-brace-same-line" to mapOf("value" to false, "isActive" to true),
+// //                "indent-inside-if" to mapOf("value" to 2, "isActive" to true),
+// //                "mandatory-line-break-after-statement" to mapOf("value" to true, "isActive" to true),
+//                "line-breaks-after-println" to mapOf("value" to 1, "isActive" to true),
+//                "mandatory-single-space-separation" to mapOf("value" to true, "isActive" to true),
+//                "enforce-no-spacing-around-equals" to mapOf("value" to true, "isActive" to true),
+//                "enforce-spacing-after-colon-in-declaration" to mapOf("value" to true, "isActive" to true),
+//                "enforce-spacing-around-equals" to mapOf("value" to true, "isActive" to true),
+//                "mandatory-space-surrounding-operations" to mapOf("value" to true, "isActive" to true),
+//                "enforce-spacing-before-colon-in-declaration" to mapOf("value" to true, "isActive" to true),
+//            )
 
         val json = objectMapper.writeValueAsString(defaultConfig)
 
