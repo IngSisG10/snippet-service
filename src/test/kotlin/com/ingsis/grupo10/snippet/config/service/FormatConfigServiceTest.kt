@@ -1,6 +1,7 @@
 package com.ingsis.grupo10.snippet.config.service
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.ingsis.grupo10.snippet.client.PrintScriptClient
 import com.ingsis.grupo10.snippet.dto.rules.RuleConfigRequest
 import com.ingsis.grupo10.snippet.models.FormatConfig
 import com.ingsis.grupo10.snippet.repository.FormatConfigRepository
@@ -19,13 +20,14 @@ class FormatConfigServiceTest {
 
     private lateinit var formatConfigService: FormatConfigService
     private lateinit var objectMapper: ObjectMapper
+    private lateinit var printScriptClient: PrintScriptClient
 
     private val testUserId = "test-user-id"
 
     @BeforeEach
     fun setUp() {
         objectMapper = ObjectMapper()
-        formatConfigService = FormatConfigService(formatConfigRepository, objectMapper)
+        formatConfigService = FormatConfigService(formatConfigRepository, printScriptClient, objectMapper)
     }
 
     @Test

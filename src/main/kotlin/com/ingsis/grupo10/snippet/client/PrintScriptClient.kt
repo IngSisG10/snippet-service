@@ -1,5 +1,6 @@
 package com.ingsis.grupo10.snippet.client
 
+import com.ingsis.grupo10.snippet.dto.rules.RuleDto
 import com.ingsis.grupo10.snippet.dto.validation.ExecutionError
 import com.ingsis.grupo10.snippet.dto.validation.ExecutionResult
 import com.ingsis.grupo10.snippet.dto.validation.FormatResultDTO
@@ -104,6 +105,7 @@ class PrintScriptClient(
         }
     }
 
+    // fixme?
     private fun createDefaultLintConfig(): FileSystemResource {
         val tempConfig = createTempFile(prefix = "config", suffix = ".json")
         tempConfig.writeText(
@@ -202,9 +204,19 @@ class PrintScriptClient(
         }
     }
 
-    fun getFormatConfigRules() {
-        TODO()
-    }
+    fun getFormatConfigRules(version: String): List<RuleDto> =
+        try {
+            webClient
+                .get()
+                .uri("/api/printscript/format/$version")
+                .retrieve()
+                .bodyToFlux(RuleDto::class.java)
+                .collectList()
+                .block()
+                ?: emptyList()
+        } catch (ex: Exception) {
+            throw RuntimeException("Error fetching formatting rules from PrintScript service: ${ex.message}", ex)
+        }
 
     fun getLintConfigRules() {
         TODO()
