@@ -1,0 +1,12 @@
+name: publish_dev_image.yml
+on:
+  workflow_dispatch: {}
+
+permissions:
+  packages: write
+  contents: read
+
+jobs:
+  publish_image:
+    uses: IngSisG10/snippet-infrastructure/.github/workflows/publish_dev_to_ghcr.yml@main
+    secrets: inherit
