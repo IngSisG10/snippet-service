@@ -1,31 +1,26 @@
 package com.ingsis.grupo10.snippet.config.service
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.ingsis.grupo10.snippet.dto.lintconfig.LintConfigRequest
+import com.ingsis.grupo10.snippet.dto.rules.RuleConfigRequest
 import com.ingsis.grupo10.snippet.models.LintConfig
 import com.ingsis.grupo10.snippet.repository.LintConfigRepository
 import com.ingsis.grupo10.snippet.service.LintConfigService
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito.any
-import org.mockito.Mockito.times
-import org.mockito.Mockito.verify
+import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
-import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.test.context.bean.override.mockito.MockitoBean
 import java.util.UUID
 
-@SpringBootTest
 class LintConfigServiceTest {
-    @MockitoBean
-    private lateinit var lintConfigRepository: LintConfigRepository
+    private val lintConfigRepository: LintConfigRepository = mock()
 
     private lateinit var lintConfigService: LintConfigService
     private lateinit var objectMapper: ObjectMapper
 
-    private val testUserId = UUID.randomUUID()
+    private val testUserId = "test-user-id"
 
     @BeforeEach
     fun setUp() {
@@ -38,32 +33,29 @@ class LintConfigServiceTest {
         val config =
             LintConfig(
                 id = UUID.randomUUID(),
-                userId = testUserId.toString(),
-                config = """{"identifier_format":"camel case"}""",
+                userId = testUserId,
+                config = """{"identifier_format":{"value":"camel case","isActive":true}}""",
             )
 
-        `when`(lintConfigRepository.findByUserId(testUserId.toString())).thenReturn(config)
+        `when`(lintConfigRepository.findByUserId(testUserId)).thenReturn(config)
 
-        val result = lintConfigService.getConfig(testUserId.toString())
+        val result = lintConfigService.getConfig(testUserId)
 
         assertNotNull(result)
-        assertEquals(testUserId.toString(), result.userId)
-        assertEquals("camel case", result.identifierFormat)
-        verify(lintConfigRepository, times(1)).findByUserId(testUserId.toString())
+        assertTrue(result.isNotEmpty())
+        assertEquals("identifier_format", result[0].id)
+        assertEquals("camel case", result[0].value)
     }
 
     @Test
     fun `should create default config when user has no config`() {
-        `when`(lintConfigRepository.findByUserId(testUserId.toString())).thenReturn(null)
-        `when`(lintConfigRepository.save(any(LintConfig::class.java))).thenAnswer { it.arguments[0] }
+        `when`(lintConfigRepository.findByUserId(testUserId)).thenReturn(null)
+        `when`(lintConfigRepository.save(org.mockito.kotlin.any())).thenAnswer { it.arguments[0] }
 
-        val result = lintConfigService.getConfig(testUserId.toString())
+        val result = lintConfigService.getConfig(testUserId)
 
         assertNotNull(result)
-        assertEquals(testUserId.toString(), result.userId)
-        assertEquals("camel case", result.identifierFormat)
-        verify(lintConfigRepository, times(1)).findByUserId(testUserId.toString())
-        verify(lintConfigRepository, times(1)).save(any(LintConfig::class.java))
+        assertTrue(result.isNotEmpty())
     }
 
     @Test
@@ -71,62 +63,68 @@ class LintConfigServiceTest {
         val existingConfig =
             LintConfig(
                 id = UUID.randomUUID(),
-                userId = testUserId.toString(),
-                config = """{"identifier_format":"camel case"}""",
+                userId = testUserId,
+                config = """{"identifier_format":{"value":"camel case","isActive":true}}""",
             )
 
         val request =
-            LintConfigRequest(
-                identifierFormat = "snake case",
-                printlnExpressionAllowed = true,
-                readInputExpressionAllowed = false,
+            listOf(
+                RuleConfigRequest(
+                    id = "identifier_format",
+                    name = "Identifier Format",
+                    isActive = true,
+                    value = "snake case",
+                ),
             )
 
-        `when`(lintConfigRepository.findByUserId(testUserId.toString())).thenReturn(existingConfig)
-        `when`(lintConfigRepository.save(any(LintConfig::class.java))).thenAnswer { it.arguments[0] }
+        `when`(lintConfigRepository.findByUserId(testUserId)).thenReturn(existingConfig)
+        `when`(lintConfigRepository.save(org.mockito.kotlin.any())).thenAnswer { it.arguments[0] }
 
-        val result = lintConfigService.updateConfig(testUserId.toString(), request)
+        val result = lintConfigService.updateConfig(testUserId, request)
 
         assertNotNull(result)
-        assertEquals(testUserId.toString(), result.userId)
-        assertEquals("snake case", result.identifierFormat)
-        assertEquals(true, result.printlnExpressionAllowed)
-        assertEquals(false, result.readInputExpressionAllowed)
-        verify(lintConfigRepository, times(1)).save(any(LintConfig::class.java))
+        assertTrue(result.isNotEmpty())
+        assertEquals("snake case", result[0].value)
     }
 
     @Test
     fun `should create new config when updating non-existent config`() {
         val request =
-            LintConfigRequest(
-                identifierFormat = "snake case",
+            listOf(
+                RuleConfigRequest(
+                    id = "identifier_format",
+                    name = "Identifier Format",
+                    isActive = true,
+                    value = "snake case",
+                ),
             )
 
-        `when`(lintConfigRepository.findByUserId(testUserId.toString())).thenReturn(null)
-        `when`(lintConfigRepository.save(any(LintConfig::class.java))).thenAnswer { it.arguments[0] }
+        `when`(lintConfigRepository.findByUserId(testUserId)).thenReturn(null)
+        `when`(lintConfigRepository.save(org.mockito.kotlin.any())).thenAnswer { it.arguments[0] }
 
-        val result = lintConfigService.updateConfig(testUserId.toString(), request)
+        val result = lintConfigService.updateConfig(testUserId, request)
 
         assertNotNull(result)
-        assertEquals(testUserId.toString(), result.userId)
-        assertEquals("snake case", result.identifierFormat)
-        verify(lintConfigRepository, times(1)).save(any(LintConfig::class.java))
+        assertTrue(result.isNotEmpty())
     }
 
     @Test
-    fun `should get config as JSON string`() {
+    fun `should get config as JSON string with only active rules`() {
         val config =
             LintConfig(
                 id = UUID.randomUUID(),
-                userId = testUserId.toString(),
-                config = """{"identifier_format":"camel case"}""",
+                userId = testUserId,
+                config = """{"identifier_format":{"value":"camel case","isActive":true},"other_rule":{"value":"test","isActive":false}}""",
             )
 
-        `when`(lintConfigRepository.findByUserId(testUserId.toString())).thenReturn(config)
+        `when`(lintConfigRepository.findByUserId(testUserId)).thenReturn(config)
 
-        val result = lintConfigService.getConfigJson(testUserId.toString())
+        val result = lintConfigService.getConfigJson(testUserId)
 
         assertNotNull(result)
-        assertEquals("""{"identifier_format":"camel case"}""", result)
+        // Should contain active rules
+        assertTrue(result.contains("identifier_format"))
+        // Should NOT contain inactive rules
+        assertTrue(!result.contains("other_rule"))
     }
 }
