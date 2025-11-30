@@ -29,7 +29,6 @@ class FormatConfigService(
     ): List<RuleConfigResponse> {
         val existingConfig = formatConfigRepository.findByUserId(userId)
 
-        // fixme
         val configJson = buildConfigJson(request) // "enforce-spacing-around-equals": {"value": true, "isActive": true}
 
         val config =
