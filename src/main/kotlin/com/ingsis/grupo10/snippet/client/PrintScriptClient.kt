@@ -193,7 +193,7 @@ class PrintScriptClient(
                     .body(
                         BodyInserters
                             .fromMultipartData("snippet", FileSystemResource(tempFilePath.toFile()))
-                            .with("config", FileSystemResource(tempConfigPath.toFile())), // fixme -> getFormatConfigRules()
+                            .with("config", FileSystemResource(tempConfigPath.toFile())),
                     ).retrieve()
                     .bodyToMono(String::class.java)
                     .block() ?: throw RuntimeException("No response from PrintScript service")
@@ -205,20 +205,19 @@ class PrintScriptClient(
         }
     }
 
-    fun getFormatConfigRules(version: String): List<RuleDto> {
+    fun getFormatConfigRules(version: String): List<RuleDto> =
         try {
-            val formatRules =
-                webClient
-                    .get()
-                    .uri("/api/printscript/format/$version")
-                    .retrieve()
-                    .bodyToFlux(RuleDto::class.java)
-                    .collectList()
-                    .block() ?: throw RuntimeException("No response from PrintScript service")
-        } finally {
-            TODO()
+            webClient
+                .get()
+                .uri("/api/printscript/format/$version")
+                .retrieve()
+                .bodyToFlux(RuleDto::class.java)
+                .collectList()
+                .block()
+                ?: emptyList()
+        } catch (ex: Exception) {
+            throw RuntimeException("Error fetching formatting rules from PrintScript service: ${ex.message}", ex)
         }
-    }
 
     fun getLintConfigRules() {
         TODO()

@@ -73,9 +73,7 @@ class SnippetService(
         val validationResult =
             printScriptClient.validateSnippet(
                 code = request.content,
-                version = "1.0", // fixme: Hardcoded for now ->
-                // La "ui" (eleccion de la version por el usuario),
-                // puede determinar que version del lenguaje querria ejecutar
+                version = "1.1",
             )
 
         when (validationResult) {
@@ -109,7 +107,7 @@ class SnippetService(
                         language = language,
                         codeUrl = codeUrl,
                         description = "",
-                        version = "1.0",
+                        version = "1.1",
                         createdAt = LocalDateTime.now(),
                         updatedAt = LocalDateTime.now(),
                     )
@@ -212,7 +210,7 @@ class SnippetService(
         val validationResult =
             printScriptClient.validateSnippet(
                 code = request.content,
-                version = "1.0",
+                version = "1.1",
             )
 
         when (validationResult) {
