@@ -79,7 +79,7 @@ class PrintScriptClient(
                     .body(
                         BodyInserters
                             .fromMultipartData("snippet", FileSystemResource(tempFilePath.toFile()))
-                            .with("config", createDefaultLintConfig()), // JSON con reglas
+                            .with("config", createDefaultLintConfig()), // todo: JSON con reglas - deberia ser nuestro getLintConfigRules()
                     ).retrieve()
                     .bodyToMono(String::class.java)
                     .block() ?: throw RuntimeException("No response from PrintScript service")
@@ -158,7 +158,8 @@ class PrintScriptClient(
                     .body(
                         BodyInserters
                             .fromMultipartData("snippet", FileSystemResource(tempFilePath.toFile()))
-                            .with("config", FileSystemResource(tempConfigPath.toFile())),
+                            .with("config", FileSystemResource(tempConfigPath.toFile())), // todo: JSON con reglas
+                        // - deberia ser nuestro getLintConfigRules()
                     ).retrieve()
                     .bodyToMono(LintResultDTO::class.java)
                     .block() ?: throw RuntimeException("No response from PrintScript service")
@@ -200,5 +201,13 @@ class PrintScriptClient(
             tempFilePath.deleteExisting()
             tempConfigPath.deleteExisting()
         }
+    }
+
+    fun getFormatConfigRules() {
+        TODO()
+    }
+
+    fun getLintConfigRules() {
+        TODO()
     }
 }

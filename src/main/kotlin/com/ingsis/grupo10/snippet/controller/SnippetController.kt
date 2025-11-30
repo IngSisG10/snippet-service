@@ -162,51 +162,33 @@ class SnippetController(
         }
 
         val updated = snippetService.updateSnippet(id, request)
+
+        // todo: Test automaticos
+        // snippetService.generateTestEvents(id)
+
         return ResponseEntity.ok(updated)
     }
 
-    @PostMapping("/{id}/lint")
-    fun lintSnippet(
-        @AuthenticationPrincipal jwt: Jwt,
-        @PathVariable id: UUID,
-    ): ResponseEntity<Map<String, String>> {
-        val userId = jwt.subject
-
-        val hasOwnerPermission = authClient.checkPermission(id, userId, "OWNER")
-
-        if (!hasOwnerPermission) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
-        }
-
-        // Publicar mensaje al Redis Stream
-        lintRequestProducer.publishLintRequest(id.toString())
-
-        return ResponseEntity
-            .status(HttpStatus.ACCEPTED)
-            .body(mapOf("message" to "Lint request queued for processing"))
-    }
-
-    // TODO: Sacar este endpoint, y acceder a la lógica del formatRequestProducer.publishFormatRequest() desde el endpoint de FormatConfigController
-    @PostMapping("/{id}/auto-format")
-    fun autoFormatSnippet(
-        @AuthenticationPrincipal jwt: Jwt,
-        @PathVariable id: UUID,
-    ): ResponseEntity<Map<String, String>> {
-        val userId = jwt.subject
-
-        val hasOwnerPermission = authClient.checkPermission(id, userId, "OWNER")
-
-        if (!hasOwnerPermission) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
-        }
-
-        // Publicar mensaje al Redis Stream
-        formatRequestProducer.publishFormatRequest(id.toString())
-
-        return ResponseEntity
-            .status(HttpStatus.ACCEPTED)
-            .body(mapOf("message" to "Format request queued for processing"))
-    }
+    // fixme
+    // todo: la logica de linting deberia de hacerla cuando crea el snippet.
+    // todo: De esa forma, es probable que podamos informar que reglas de "linting" no paso por UI!
+//    @PostMapping("/{id}/lint")
+//    fun lintSnippet(
+//        @AuthenticationPrincipal jwt: Jwt,
+//        @PathVariable id: UUID,
+//    ): ResponseEntity<Map<String, String>> {
+//        val userId = jwt.subject
+//
+//        val hasOwnerPermission = authClient.checkPermission(id, userId, "OWNER")
+//
+//        if (!hasOwnerPermission) {
+//            return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
+//        }
+//
+//        val snippet = snippetService.lintSnippet(userId ,id)
+//        return ResponseEntity.ok(snippet)
+//
+//    }
 
     @PostMapping("/{id}/format")
     fun formatSnippet(
@@ -221,7 +203,7 @@ class SnippetController(
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
         }
 
-        val snippet = snippetService.formatSnippet(id)
+        val snippet = snippetService.formatSnippet(userId, id)
         return ResponseEntity.ok(snippet)
     }
 

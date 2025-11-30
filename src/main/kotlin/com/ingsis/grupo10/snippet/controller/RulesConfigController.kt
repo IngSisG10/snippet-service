@@ -2,7 +2,6 @@ package com.ingsis.grupo10.snippet.controller
 
 import com.ingsis.grupo10.snippet.dto.rules.RuleConfigRequest
 import com.ingsis.grupo10.snippet.dto.rules.RuleConfigResponse
-import com.ingsis.grupo10.snippet.dto.rules.RuleDto
 import com.ingsis.grupo10.snippet.service.RuleConfigService
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
@@ -30,7 +29,7 @@ class RulesConfigController(
     @GetMapping("/lint")
     fun getLintingRules(
         @AuthenticationPrincipal jwt: Jwt,
-    ): ResponseEntity<List<RuleDto>> {
+    ): ResponseEntity<List<RuleConfigResponse>> {
         val userId = jwt.subject
         val rules = ruleConfigService.getLintingRules(userId)
         return ResponseEntity.ok(rules)
@@ -53,10 +52,15 @@ class RulesConfigController(
 
     @PutMapping("/lint")
     fun updateLintingRules(
-        @RequestBody rules: Map<String, Any>,
+        @RequestBody rules: List<RuleConfigRequest>,
         @AuthenticationPrincipal jwt: Jwt,
-    ): ResponseEntity<Void> {
-        ruleConfigService.updateLintingRules(rules, jwt.subject)
-        return ResponseEntity.ok().build()
+    ): ResponseEntity<List<RuleConfigResponse>> {
+        val userId = jwt.subject
+
+        val updatedRules = ruleConfigService.updateLintingRules(rules, jwt.subject)
+
+        ruleConfigService.generateLintEvents(userId)
+
+        return ResponseEntity.ok(updatedRules)
     }
 }

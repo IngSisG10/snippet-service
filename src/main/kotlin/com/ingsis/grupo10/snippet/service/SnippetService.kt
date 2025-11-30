@@ -254,12 +254,15 @@ class SnippetService(
     }
 
     @Transactional
-    fun lintSnippet(id: UUID): SnippetDetailDto {
+    fun lintSnippet(
+        userId: String,
+        id: UUID,
+    ): SnippetDetailDto {
         val snippet = snippetRepository.findById(id).orElseThrow { IllegalArgumentException("Snippet not found") }
 
         // TODO: Get user-specific lint config - for now use default
-        val lintConfig = "{}" // Default config
-//        val lintConfig = lintConfigService.getConfigJson(userUuid)
+        // val lintConfig = "{}" // Default config
+        val lintConfig = lintConfigService.getConfigJson(userId)
 
         val (container, key) = parseCodeUrl(snippet.codeUrl)
 
@@ -278,12 +281,15 @@ class SnippetService(
     }
 
     @Transactional
-    fun formatSnippet(id: UUID): SnippetUIFormatDto {
+    fun formatSnippet(
+        userId: String,
+        id: UUID,
+    ): SnippetUIFormatDto {
         val snippet = snippetRepository.findById(id).orElseThrow { IllegalArgumentException("Snippet not found") }
 
         // TODO: Get user-specific format config - for now use default
-        val formatConfig = """{"enforce-spacing-around-equals": true}"""
-//        val formatConfig = formatConfigService.getConfigJson(userUuid)
+        // val formatConfig = """{"enforce-spacing-around-equals": true}"""
+        val formatConfig = formatConfigService.getConfigJson(userId)
 
         val (container, key) = parseCodeUrl(snippet.codeUrl)
 
@@ -428,5 +434,10 @@ class SnippetService(
                 )
             }
         }
+    }
+
+    // todo
+    fun generateTestEvents(snippetId: UUID) {
+        TODO()
     }
 }
