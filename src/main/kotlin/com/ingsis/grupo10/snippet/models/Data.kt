@@ -1,5 +1,6 @@
 package com.ingsis.grupo10.snippet.models
 
+import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.FetchType
 import jakarta.persistence.Id
@@ -17,6 +18,7 @@ class Data(
     @JoinColumn(name = "log_id", nullable = false)
     val log: Log,
     val name: String,
+    @Column(columnDefinition = "TEXT")
     val data: String,
 ) {
     override fun hashCode(): Int = id.hashCode()
