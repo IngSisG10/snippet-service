@@ -8,6 +8,7 @@ import com.ingsis.grupo10.snippet.service.LogService
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.`when`
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
@@ -18,6 +19,7 @@ import java.time.LocalDateTime
 import java.util.UUID
 
 @WebMvcTest(LogController::class)
+@AutoConfigureMockMvc(addFilters = false)
 class LogControllerTest {
     @Autowired
     private lateinit var mockMvc: MockMvc

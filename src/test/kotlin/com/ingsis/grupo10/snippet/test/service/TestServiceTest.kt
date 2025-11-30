@@ -40,11 +40,12 @@ class TestServiceTest {
     private lateinit var testRequest: TestCreateRequest
     private val testRepository: TestRepository = mock()
     private val snippetRepository: SnippetRepository = mock()
-    private val assetClient: AssetClient = mock() // fixme
+    private val printScriptClient = mock<com.ingsis.grupo10.snippet.client.PrintScriptClient>()
+    private val assetClient: AssetClient = mock()
 
     @BeforeEach
     fun setUp() {
-        testService = TestService(testRepository, snippetRepository)
+        testService = TestService(testRepository, snippetRepository, printScriptClient, assetClient)
 
         val snippetId = UUID.randomUUID()
         val code = "let x: number = 5;\nprintln(x);"
@@ -80,15 +81,15 @@ class TestServiceTest {
                 id = UUID.randomUUID(),
                 snippet = testSnippet,
                 name = "Test case 1",
-                inputs = "5",
-                expectedOutputs = "5",
+                input = listOf("5"),
+                output = listOf("5"),
             )
 
         testRequest =
             TestCreateRequest(
                 name = "Test case 1",
-                inputs = "5",
-                expectedOutputs = "5",
+                input = listOf("5"),
+                output = listOf("5"),
             )
     }
 
@@ -101,9 +102,8 @@ class TestServiceTest {
 
         assertNotNull(result)
         assertEquals(testRequest.name, result.name)
-        assertEquals(testRequest.inputs, result.inputs)
-        assertEquals(testRequest.expectedOutputs, result.expectedOutputs)
-        assertEquals(testSnippet.id, result.snippetId)
+        assertEquals(testRequest.input, result.input)
+        assertEquals(testRequest.output, result.output)
         assertNotNull(result.id)
         verify(snippetRepository, times(1)).findById(testSnippet.id)
         verify(testRepository, times(1)).save(any(Test::class.java))
@@ -136,9 +136,8 @@ class TestServiceTest {
         assertEquals(1, result.size)
         assertEquals(testCase.id, result[0].id)
         assertEquals(testCase.name, result[0].name)
-        assertEquals(testCase.inputs, result[0].inputs)
-        assertEquals(testCase.expectedOutputs, result[0].expectedOutputs)
-        assertEquals(testSnippet.id, result[0].snippetId)
+        assertEquals(testCase.input, result[0].input)
+        assertEquals(testCase.output, result[0].output)
         verify(snippetRepository, times(1)).existsById(testSnippet.id)
         verify(testRepository, times(1)).findBySnippetId(testSnippet.id)
     }
@@ -179,9 +178,8 @@ class TestServiceTest {
         assertNotNull(result)
         assertEquals(testCase.id, result.id)
         assertEquals(testCase.name, result.name)
-        assertEquals(testCase.inputs, result.inputs)
-        assertEquals(testCase.expectedOutputs, result.expectedOutputs)
-        assertEquals(testSnippet.id, result.snippetId)
+        assertEquals(testCase.input, result.input)
+        assertEquals(testCase.output, result.output)
         verify(testRepository, times(1)).findById(testCase.id)
     }
 
@@ -204,8 +202,8 @@ class TestServiceTest {
         val updateRequest =
             TestCreateRequest(
                 name = "Updated test case",
-                inputs = "10",
-                expectedOutputs = "10",
+                input = listOf("10"),
+                output = listOf("10"),
             )
 
         `when`(testRepository.findById(testCase.id)).thenReturn(Optional.of(testCase))
@@ -216,9 +214,8 @@ class TestServiceTest {
         assertNotNull(result)
         assertEquals(testCase.id, result.id)
         assertEquals(updateRequest.name, result.name)
-        assertEquals(updateRequest.inputs, result.inputs)
-        assertEquals(updateRequest.expectedOutputs, result.expectedOutputs)
-        assertEquals(testSnippet.id, result.snippetId)
+        assertEquals(updateRequest.input, result.input)
+        assertEquals(updateRequest.output, result.output)
         verify(testRepository, times(1)).findById(testCase.id)
         verify(testRepository, times(1)).save(any(Test::class.java))
     }
@@ -270,8 +267,8 @@ class TestServiceTest {
                 id = UUID.randomUUID(),
                 snippet = testSnippet,
                 name = "Test case 2",
-                inputs = "10",
-                expectedOutputs = "10",
+                input = listOf("10"),
+                output = listOf("10"),
             )
 
         val tests = listOf(testCase, testCase2)

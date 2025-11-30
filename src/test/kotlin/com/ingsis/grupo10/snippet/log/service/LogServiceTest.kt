@@ -86,8 +86,8 @@ class LogServiceTest {
                 id = UUID.randomUUID(),
                 snippet = testSnippet,
                 name = "Test Case",
-                inputs = "5",
-                expectedOutputs = "5",
+                input = listOf("5"),
+                output = listOf("5"),
             )
 
         validationTag = Tag(UUID.randomUUID(), "validation")
