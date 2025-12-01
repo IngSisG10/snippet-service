@@ -17,10 +17,10 @@ import java.util.UUID
 
 class FormatConfigServiceTest {
     private val formatConfigRepository: FormatConfigRepository = mock()
+    private val printScriptClient: PrintScriptClient = mock()
 
     private lateinit var formatConfigService: FormatConfigService
     private lateinit var objectMapper: ObjectMapper
-    private lateinit var printScriptClient: PrintScriptClient
 
     private val testUserId = "test-user-id"
 
