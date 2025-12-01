@@ -12,8 +12,8 @@ import java.util.UUID
 @Service
 class LintConfigService(
     private val lintConfigRepository: LintConfigRepository,
-    private val objectMapper: ObjectMapper,
     private val printScriptClient: PrintScriptClient,
+    private val objectMapper: ObjectMapper,
 ) {
     fun getConfig(userId: String): List<RuleConfigResponse> {
         val config =
