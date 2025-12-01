@@ -70,8 +70,6 @@ class FormatConfigService(
         return objectMapper.writeValueAsString(simplifiedConfig)
     }
 
-    // todo: que agarre las rules de printscript
-    // todo: mockearlo con los nombres que deben ser
     private fun createDefaultConfig(userId: String): FormatConfig {
         val rules = printScriptClient.getFormatConfigRules("1.1")
 

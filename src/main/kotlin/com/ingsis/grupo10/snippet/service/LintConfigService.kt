@@ -1,6 +1,7 @@
 package com.ingsis.grupo10.snippet.service
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.ingsis.grupo10.snippet.client.PrintScriptClient
 import com.ingsis.grupo10.snippet.dto.rules.RuleConfigRequest
 import com.ingsis.grupo10.snippet.dto.rules.RuleConfigResponse
 import com.ingsis.grupo10.snippet.models.LintConfig
@@ -12,6 +13,7 @@ import java.util.UUID
 class LintConfigService(
     private val lintConfigRepository: LintConfigRepository,
     private val objectMapper: ObjectMapper,
+    private val printScriptClient: PrintScriptClient,
 ) {
     fun getConfig(userId: String): List<RuleConfigResponse> {
         val config =
@@ -70,26 +72,45 @@ class LintConfigService(
 
     // todo: add other rules of linting
     private fun createDefaultConfig(userId: String): LintConfig {
-        val defaultConfig =
-            mapOf(
-                "identifier_format" to
-                    mapOf(
-                        "value" to "camel case", // "puede cambiarse a snake case, pascal case"
-                        "isActive" to true,
-                    ),
-                "mandatory-variable-or-literal-in-println" to
-                    mapOf(
-                        "value" to true,
-                        "isActive" to true,
-                    ),
-                "mandatory-variable-or-literal-in-readInput" to
-                    mapOf(
-                        "value" to true,
-                        "isActive" to true,
-                    ),
-            )
+        val rules = printScriptClient.getLintConfigRules("1.1")
+//            mapOf(
+//                "identifier_format" to
+//                    mapOf(
+//                        "value" to "camel case", // "puede cambiarse a snake case, pascal case"
+//                        "isActive" to true,
+//                    ),
+//                "mandatory-variable-or-literal-in-println" to
+//                    mapOf(
+//                        "value" to true,
+//                        "isActive" to true,
+//                    ),
+//                "mandatory-variable-or-literal-in-readInput" to
+//                    mapOf(
+//                        "value" to true,
+//                        "isActive" to true,
+//                    ),
+//            )
 
-        val json = objectMapper.writeValueAsString(defaultConfig)
+        val configMap =
+            rules.associate { rule ->
+                val defaultValue =
+                    rule.data.firstOrNull()?.default ?: "true"
+
+                val value: Any =
+                    when (rule.data.firstOrNull()?.type) {
+                        "Boolean" -> defaultValue.toBoolean()
+                        "Number" -> defaultValue.toIntOrNull() ?: defaultValue
+                        else -> defaultValue
+                    }
+
+                rule.name to
+                    mapOf(
+                        "value" to value,
+                        "isActive" to true,
+                    )
+            }
+
+        val json = objectMapper.writeValueAsString(configMap)
 
         return lintConfigRepository.save(
             LintConfig(
@@ -121,7 +142,12 @@ class LintConfigService(
         return configMap.map { (key, ruleData) ->
             RuleConfigResponse(
                 id = key,
-                name = key.split("_").joinToString(" ") { it.replaceFirstChar(Char::uppercase) },
+                name =
+                    key
+                        .replace("-", " ")
+                        .replace("_", " ")
+                        .split(" ")
+                        .joinToString(" ") { it.replaceFirstChar(Char::uppercase) },
                 isActive = ruleData["isActive"] as? Boolean ?: true,
                 value = ruleData["value"],
             )
