@@ -70,7 +70,6 @@ class LintConfigService(
         return parseConfigToResponse(config)
     }
 
-    // todo: add other rules of linting
     private fun createDefaultConfig(userId: String): LintConfig {
         val rules = printScriptClient.getLintConfigRules("1.1")
 
