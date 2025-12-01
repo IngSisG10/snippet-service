@@ -6,6 +6,7 @@ import com.ingsis.grupo10.snippet.dto.snippets.PermissionCheckResponse
 import com.ingsis.grupo10.snippet.dto.snippets.RegisterSnippetRequest
 import com.ingsis.grupo10.snippet.dto.snippets.SnippetPermissionInfo
 import com.ingsis.grupo10.snippet.dto.snippets.SnippetPermissionInformation
+import com.ingsis.grupo10.snippet.dto.snippets.UserResponse
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Service
@@ -213,4 +214,32 @@ class AuthClient(
             println("Error getting snippet owner: ${ex.message}")
             null
         }
+
+    fun registerOrLoginUser(
+        userId: String,
+        email: String?,
+        name: String?
+    ): Boolean {
+        return try {
+            val requestBody = mapOf(
+                "userId" to userId,
+                "email" to email,
+                "name" to name
+            )
+
+            val response = webClient
+                .post()
+                .uri("/users/register-or-login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(requestBody)
+                .retrieve()
+                .bodyToMono<UserResponse>()
+                .block()
+
+            response != null
+        } catch (ex: Exception) {
+            println("Error registering/logging in user: ${ex.message}")
+            false
+        }
+    }
 }
