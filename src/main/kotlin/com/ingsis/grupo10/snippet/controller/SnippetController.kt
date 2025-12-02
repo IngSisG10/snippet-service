@@ -55,7 +55,6 @@ class SnippetController(
                 pageSize = pageSize,
                 name = name,
             )
-
         return ResponseEntity.ok(result)
     }
 
