@@ -13,6 +13,7 @@ import com.ingsis.grupo10.snippet.dto.paginatedsnippets.PaginatedSnippetsRespons
 import com.ingsis.grupo10.snippet.dto.tests.ExecutionDto
 import com.ingsis.grupo10.snippet.producer.FormatRequestProducer
 import com.ingsis.grupo10.snippet.producer.LintRequestProducer
+import com.ingsis.grupo10.snippet.service.LogService
 import com.ingsis.grupo10.snippet.service.SnippetService
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -36,6 +37,7 @@ class SnippetController(
     private val authClient: AuthClient,
     private val lintRequestProducer: LintRequestProducer,
     private val formatRequestProducer: FormatRequestProducer,
+    private val logService : LogService,
 ) {
     @GetMapping("/descriptors")
     fun listSnippetDescriptors(
@@ -44,15 +46,20 @@ class SnippetController(
         @RequestParam(required = false, defaultValue = "") name: String?,
         @RequestParam(required = false, defaultValue = "") compliance: String?,
         @RequestParam(required = false, defaultValue = "") language: String?,
+        @RequestParam(required = false, defaultValue = "") status: String?,
         @AuthenticationPrincipal jwt: Jwt,
     ): ResponseEntity<PaginatedSnippetsResponse> {
         val username = jwt.getClaimAsString("https://your-app.com/name")
         val userId = jwt.subject
 
-        val snippetIds = when (compliance) {
+        var snippetIds = when (status) {
             "owner" -> authClient.getUserOwnedSnippets(userId)
             "read" -> authClient.getUserReadSnippets(userId)
             else -> authClient.getUserAccessibleSnippets(userId) // "all"
+        }
+
+        if (compliance != null && compliance != "all") {
+            snippetIds = logService.getSnippetIdsByCompliance(snippetIds, compliance)
         }
 
         val result = snippetService.listSnippetDescriptors(
@@ -61,7 +68,7 @@ class SnippetController(
             pageSize = pageSize,
             name = name,
             snippetIds = snippetIds,
-            language = language
+            language = language,
         )
 
         return ResponseEntity.ok(result)

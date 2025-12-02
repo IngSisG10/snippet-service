@@ -328,7 +328,7 @@ class SnippetService(
         pageSize: Int,
         name: String?,
         snippetIds: List<UUID>,
-        language: String?
+        language: String?,
     ): PaginatedSnippetsResponse {
 
         if (snippetIds.isEmpty()) {
@@ -345,7 +345,7 @@ class SnippetService(
             snippetIds = snippetIds,
             name = name.takeIf { !it.isNullOrBlank() },
             language = language.takeIf { !it.isNullOrBlank() },
-            pageable = pageable
+            pageable = pageable,
         )
 
         val snippetDtos = paginatedResult.content.map { snippet ->
