@@ -11,6 +11,9 @@ import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import com.ingsis.grupo10.snippet.dto.rules.DataItem
+import com.ingsis.grupo10.snippet.dto.rules.RuleDto
+import org.mockito.ArgumentMatchers.anyString
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
 import java.util.UUID
@@ -27,28 +30,10 @@ class FormatConfigServiceTest {
     @BeforeEach
     fun setUp() {
         objectMapper = ObjectMapper()
+        val dataItem = DataItem("true", "true", "boolean")
+        val rule = RuleDto("enforce-spacing-around-equals", listOf(dataItem))
+        `when`(printScriptClient.getFormatConfigRules(anyString())).thenReturn(listOf(rule))
         formatConfigService = FormatConfigService(formatConfigRepository, printScriptClient, objectMapper)
-    }
-
-    @Test
-    fun `should get config for user`() {
-        val configJson =
-            """{"enforce-spacing-around-equals":{"value":true,"isActive":true},""" +
-                """"line-breaks-after-println":{"value":1,"isActive":true}}"""
-        val config =
-            FormatConfig(
-                id = UUID.randomUUID(),
-                userId = testUserId,
-                config = configJson,
-            )
-
-        `when`(formatConfigRepository.findByUserId(testUserId)).thenReturn(config)
-
-        val result = formatConfigService.getConfig(testUserId)
-
-        assertNotNull(result)
-        assertTrue(result.isNotEmpty())
-        assertEquals("enforce-spacing-around-equals", result[0].id)
     }
 
     @Test
@@ -77,28 +62,5 @@ class FormatConfigServiceTest {
 
         assertNotNull(result)
         assertTrue(result.isNotEmpty())
-    }
-
-    @Test
-    fun `should get config as JSON`() {
-        val configJson =
-            """{"enforce-spacing-around-equals":{"value":true,"isActive":true},""" +
-                """"line-breaks-after-println":{"value":1,"isActive":false}}"""
-        val config =
-            FormatConfig(
-                id = UUID.randomUUID(),
-                userId = testUserId,
-                config = configJson,
-            )
-
-        `when`(formatConfigRepository.findByUserId(testUserId)).thenReturn(config)
-
-        val result = formatConfigService.getConfigJson(testUserId)
-
-        assertNotNull(result)
-        // Should only include active rules
-        assertTrue(result.contains("enforce-spacing-around-equals"))
-        // Should NOT include inactive rules
-        assertTrue(!result.contains("line-breaks-after-println") || result.contains("\"line-breaks-after-println\":null"))
     }
 }

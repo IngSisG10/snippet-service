@@ -28,10 +28,11 @@ class TestServiceTest {
     private val snippetRepository: SnippetRepository = mock()
     private val printScriptClient: com.ingsis.grupo10.snippet.client.PrintScriptClient = mock()
     private val assetClient: com.ingsis.grupo10.snippet.client.AssetClient = mock()
+    private val lintConfigService: com.ingsis.grupo10.snippet.service.LintConfigService = mock()
 
     @BeforeEach
     fun setUp() {
-        testService = TestService(testRepository, snippetRepository, printScriptClient, assetClient)
+        testService = TestService(testRepository, snippetRepository, printScriptClient, assetClient, lintConfigService)
 
         val snippetId = UUID.randomUUID()
         val code = "let x: number = 5;\nprintln(x);"

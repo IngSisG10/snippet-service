@@ -1,6 +1,7 @@
 package com.ingsis.grupo10.snippet.config.service
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.ingsis.grupo10.snippet.client.PrintScriptClient
 import com.ingsis.grupo10.snippet.dto.rules.RuleConfigRequest
 import com.ingsis.grupo10.snippet.models.LintConfig
 import com.ingsis.grupo10.snippet.repository.LintConfigRepository
@@ -10,6 +11,9 @@ import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import com.ingsis.grupo10.snippet.dto.rules.DataItem
+import com.ingsis.grupo10.snippet.dto.rules.RuleDto
+import org.mockito.ArgumentMatchers.anyString
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
 import java.util.UUID
@@ -19,13 +23,18 @@ class LintConfigServiceTest {
 
     private lateinit var lintConfigService: LintConfigService
     private lateinit var objectMapper: ObjectMapper
+    private lateinit var printScriptClient: PrintScriptClient
 
     private val testUserId = "test-user-id"
 
     @BeforeEach
     fun setUp() {
         objectMapper = ObjectMapper()
-        lintConfigService = LintConfigService(lintConfigRepository, objectMapper)
+        printScriptClient = mock()
+        val dataItem = DataItem("camelCase", "camelCase", "string")
+        val rule = RuleDto("identifier_format", listOf(dataItem))
+        `when`(printScriptClient.getLintConfigRules(anyString())).thenReturn(listOf(rule))
+        lintConfigService = LintConfigService(lintConfigRepository, printScriptClient, objectMapper)
     }
 
     @Test
@@ -38,6 +47,7 @@ class LintConfigServiceTest {
             )
 
         `when`(lintConfigRepository.findByUserId(testUserId)).thenReturn(config)
+        `when`(lintConfigRepository.save(org.mockito.kotlin.any())).thenAnswer { it.arguments[0] }
 
         val result = lintConfigService.getConfig(testUserId)
 
@@ -118,6 +128,7 @@ class LintConfigServiceTest {
             )
 
         `when`(lintConfigRepository.findByUserId(testUserId)).thenReturn(config)
+        `when`(lintConfigRepository.save(org.mockito.kotlin.any())).thenAnswer { it.arguments[0] }
 
         val result = lintConfigService.getConfigJson(testUserId)
 
