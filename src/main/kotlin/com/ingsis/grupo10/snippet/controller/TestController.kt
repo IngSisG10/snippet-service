@@ -1,11 +1,15 @@
 package com.ingsis.grupo10.snippet.controller
 
+import com.ingsis.grupo10.snippet.client.AuthClient
 import com.ingsis.grupo10.snippet.dto.TestCreateRequest
 import com.ingsis.grupo10.snippet.dto.TestResponseDto
 import com.ingsis.grupo10.snippet.dto.tests.RunTestRequest
 import com.ingsis.grupo10.snippet.dto.tests.TestResultResponse
 import com.ingsis.grupo10.snippet.service.TestService
+import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.security.core.annotation.AuthenticationPrincipal
+import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -20,6 +24,7 @@ import java.util.UUID
 @RequestMapping("/tests")
 class TestController(
     private val testService: TestService,
+    private val authClient: AuthClient,
 ) {
     @GetMapping("/{snippetId}")
     fun getTestsBySnippet(
@@ -39,26 +44,54 @@ class TestController(
 
     @PostMapping("/{snippetId}")
     fun createTest(
+        @AuthenticationPrincipal jwt: Jwt,
         @PathVariable snippetId: UUID,
         @RequestBody request: TestCreateRequest,
     ): ResponseEntity<TestResponseDto> {
+        val userId = jwt.subject
+
+        val hasOwnerPermission = authClient.checkPermission(snippetId, userId, "OWNER")
+
+        if (!hasOwnerPermission) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
+        }
         val test = testService.createTest(snippetId, request)
         return ResponseEntity.ok(test)
     }
 
-    @PutMapping("/{testId}")
+    @PutMapping("/{testId}/{snippetId}")
     fun updateTest(
+        @AuthenticationPrincipal jwt: Jwt,
         @PathVariable testId: UUID,
+        @PathVariable snippetId: UUID,
         @RequestBody request: TestCreateRequest,
     ): ResponseEntity<TestResponseDto> {
         val test = testService.updateTest(testId, request)
+        val userId = jwt.subject
+
+        val hasOwnerPermission = authClient.checkPermission(snippetId, userId, "OWNER")
+
+        if (!hasOwnerPermission) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
+        }
         return ResponseEntity.ok(test)
     }
 
-    @DeleteMapping("/{testId}")
+    @DeleteMapping("/{testId}/{snippetId}"
+    )
     fun deleteTest(
+        @AuthenticationPrincipal jwt: Jwt,
         @PathVariable testId: UUID,
+        @PathVariable snippetId: UUID,
     ): ResponseEntity<Void> {
+        val userId = jwt.subject
+
+        val hasOwnerPermission = authClient.checkPermission(snippetId, userId, "OWNER")
+
+        if (!hasOwnerPermission) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
+        }
+
         testService.deleteTest(testId)
         return ResponseEntity.noContent().build()
     }
