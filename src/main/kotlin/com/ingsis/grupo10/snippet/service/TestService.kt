@@ -21,6 +21,7 @@ class TestService(
     private val snippetRepository: SnippetRepository,
     private val printScriptClient: PrintScriptClient,
     private val assetClient: AssetClient,
+    private val lintConfigService: LintConfigService,
 ) {
     // todo: para poder ejecutar el test, debemos pegarle al execute del printscript
     // todo: para ello, necesitamos utilizar el PrintScriptClient y usar el endpoint de ejecucion
@@ -129,6 +130,8 @@ class TestService(
                 .findById(snippetId)
                 .orElseThrow { IllegalArgumentException("Snippet not found") }
 
+        val configJson = lintConfigService.getConfigJson(userId)
+
         val (container, key) = parseCodeUrl(snippet.codeUrl)
 
         val code = assetClient.getAsset(container, key)
@@ -143,7 +146,7 @@ class TestService(
         val executionResult =
             printScriptClient.executeSnippet(
                 code = finalCode,
-                userId = userId,
+                configJson = configJson,
                 version = snippet.version,
             )
 

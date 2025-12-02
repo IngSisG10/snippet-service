@@ -1,6 +1,5 @@
 package com.ingsis.grupo10.snippet.service
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.ingsis.grupo10.snippet.client.AssetClient
 import com.ingsis.grupo10.snippet.client.AuthClient
 import com.ingsis.grupo10.snippet.client.PrintScriptClient
@@ -43,7 +42,6 @@ class SnippetService(
     private val logService: LogService,
     private val lintConfigService: LintConfigService,
     private val formatConfigService: FormatConfigService,
-    private val objectMapper: ObjectMapper,
 ) {
     fun getSnippetById(id: UUID): SnippetDetailDto {
         val snippet = snippetRepository.findById(id).orElseThrow { IllegalArgumentException("Snippet not found") }
@@ -71,10 +69,12 @@ class SnippetService(
         userId: String,
         snippetId: UUID,
     ): Created {
+        val configJson = lintConfigService.getConfigJson(userId)
+
         val validationResult =
             printScriptClient.validateSnippet(
                 code = request.content,
-                userId = userId,
+                configJson = configJson,
                 version = "1.1",
             )
 
@@ -207,13 +207,15 @@ class SnippetService(
         userId: String,
         request: SnippetUIUpdateRequest,
     ): SnippetDetailDto {
+        val configJson = lintConfigService.getConfigJson(userId)
+
         val existingSnippet =
             snippetRepository.findById(id).orElseThrow { IllegalArgumentException("Snippet not found") }
 
         val validationResult =
             printScriptClient.validateSnippet(
                 code = request.content,
-                userId = userId,
+                configJson = configJson,
                 version = "1.1",
             )
 
@@ -262,8 +264,6 @@ class SnippetService(
     ): SnippetDetailDto {
         val snippet = snippetRepository.findById(id).orElseThrow { IllegalArgumentException("Snippet not found") }
 
-        // TODO: Get user-specific lint config - for now use default
-        // val lintConfig = "{}" // Default config
         val lintConfig = lintConfigService.getConfigJson(userId)
 
         val (container, key) = parseCodeUrl(snippet.codeUrl)
@@ -414,6 +414,8 @@ class SnippetService(
     ): ExecutionDto {
         val snippet = snippetRepository.findById(snippetId).orElseThrow { IllegalArgumentException("Snippet not found") }
 
+        val configJson = lintConfigService.getConfigJson(userId)
+
         val (container, key) = parseCodeUrl(snippet.codeUrl)
 
         val code = assetClient.getAsset(container, key)
@@ -421,7 +423,7 @@ class SnippetService(
         val executionResult =
             printScriptClient.executeSnippet(
                 code = code,
-                userId = userId,
+                configJson = configJson,
                 version = snippet.version,
             )
 

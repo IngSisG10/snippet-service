@@ -7,7 +7,6 @@ import com.ingsis.grupo10.snippet.dto.validation.FormatResultDTO
 import com.ingsis.grupo10.snippet.dto.validation.LintResultDTO
 import com.ingsis.grupo10.snippet.dto.validation.ValidationError
 import com.ingsis.grupo10.snippet.dto.validation.ValidationResult
-import com.ingsis.grupo10.snippet.service.LintConfigService
 import org.springframework.core.io.FileSystemResource
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Service
@@ -20,15 +19,17 @@ import kotlin.io.path.writeText
 @Service
 class PrintScriptClient(
     private val webClient: WebClient,
-    private val lintConfigService: LintConfigService,
 ) {
     fun validateSnippet(
         code: String,
-        userId: String,
+        configJson: String,
         version: String,
     ): ValidationResult {
         val tempFilePath = createTempFile(prefix = "snippet", suffix = ".ps")
         tempFilePath.writeText(code)
+
+        val tempConfigPath = createTempFile(prefix = "lint-config", suffix = ".json")
+        tempConfigPath.writeText(configJson)
 
         try {
             val response =
@@ -39,7 +40,7 @@ class PrintScriptClient(
                     .body(
                         BodyInserters
                             .fromMultipartData("snippet", FileSystemResource(tempFilePath.toFile()))
-                            .with("config", getUserLintConfigsJson(userId)),
+                            .with("config", FileSystemResource(tempConfigPath.toFile())),
                     ).retrieve()
                     .bodyToMono(LintResultDTO::class.java)
                     .block() ?: throw RuntimeException("No response from PrintScript service")
@@ -60,16 +61,20 @@ class PrintScriptClient(
             }
         } finally {
             tempFilePath.deleteExisting()
+            tempConfigPath.deleteExisting()
         }
     }
 
     fun executeSnippet(
         code: String,
-        userId: String,
+        configJson: String,
         version: String,
     ): ExecutionResult {
         val tempFilePath = createTempFile(prefix = "snippet", suffix = ".ps")
         tempFilePath.writeText(code)
+
+        val tempConfigPath = createTempFile(prefix = "lint-config", suffix = ".json")
+        tempConfigPath.writeText(configJson)
 
         try {
             val rawResponse =
@@ -80,7 +85,7 @@ class PrintScriptClient(
                     .body(
                         BodyInserters
                             .fromMultipartData("snippet", FileSystemResource(tempFilePath.toFile()))
-                            .with("config", getUserLintConfigsJson(userId)),
+                            .with("config", FileSystemResource(tempConfigPath.toFile())),
                     ).retrieve()
                     .bodyToMono(String::class.java)
                     .block() ?: throw RuntimeException("No response from PrintScript service")
@@ -102,6 +107,7 @@ class PrintScriptClient(
             return ExecutionResult.Success(output = outputLines)
         } finally {
             tempFilePath.deleteExisting()
+            tempConfigPath.deleteExisting()
         }
     }
 
@@ -218,8 +224,4 @@ class PrintScriptClient(
         } catch (ex: Exception) {
             throw RuntimeException("Error fetching linting rules from PrintScript service: ${ex.message}", ex)
         }
-
-    private fun getUserLintConfigsJson(userId: String) {
-        lintConfigService.getConfigJson(userId)
-    }
 }
