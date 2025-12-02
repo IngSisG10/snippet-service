@@ -210,7 +210,10 @@ class TestService(
     }
 
     @Transactional
-    fun runAllTestsForSnippet(snippetId: UUID): List<TestResultResponse> {
+    fun runAllTestsForSnippet(
+        userId: String,
+        snippetId: UUID,
+    ): List<TestResultResponse> {
         println("Running all tests for snippet: $snippetId")
 
         val snippet =
@@ -225,6 +228,7 @@ class TestService(
             return emptyList()
         }
 
+        val configJson = lintConfigService.getConfigJson(userId)
         val (container, key) = parseCodeUrl(snippet.codeUrl)
         val code = assetClient.getAsset(container, key)
 
@@ -233,7 +237,7 @@ class TestService(
                 val executionResult =
                     printScriptClient.executeSnippet(
                         code = code,
-                        input = test.input,
+                        configJson = configJson,
                         version = snippet.version,
                     )
 

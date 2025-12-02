@@ -254,7 +254,7 @@ class SnippetService(
                 logService.logValidation(saved, emptyList())
 
                 // Trigger test execution for all tests of this snippet
-                testExecutionProducer.publishTestExecutionRequest(saved.id.toString())
+                testExecutionProducer.publishTestExecutionRequest(userId, saved.id.toString())
 
                 return saved.toDetailDto()
             }
@@ -341,7 +341,6 @@ class SnippetService(
 //    }
 
     // List Descriptors
-    // fixme: manejar casos en los cuales no tenemos "PaginatedSnippets" que mostrar.
     fun listSnippetDescriptors(
         userId: String,
         page: Int,
