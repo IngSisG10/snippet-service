@@ -125,7 +125,7 @@ class SnippetControllerTest {
                 id = "test-id",
             )
 
-        `when`(snippetService.createSnippet(anyOrNull(), anyOrNull())).thenReturn(response)
+        `when`(snippetService.createSnippet(any(), any(), any())).thenReturn(response)
 
         mockMvc
             .perform(
@@ -157,7 +157,7 @@ class SnippetControllerTest {
                 createdAt = LocalDateTime.now(),
             )
 
-        `when`(snippetService.updateSnippet(any(), any()))
+        `when`(snippetService.updateSnippet(any(), any(), any()))
             .thenReturn(response)
 
         mockMvc

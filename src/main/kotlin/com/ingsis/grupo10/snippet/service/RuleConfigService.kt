@@ -26,7 +26,6 @@ class RuleConfigService(
             try {
                 formatRequestProducer.publishFormatRequest(userId, snippetId.toString())
             } catch (e: Exception) {
-                // fixme -> en lugar de romper: "el proceso debe reanudar desde dónde falló o salteando el snippet que causó la falla si hubiera. "
                 failedSnippets.add(snippetId)
                 println("Failed to queue format request for snippet $snippetId: ${e.message}")
             }
@@ -43,7 +42,6 @@ class RuleConfigService(
             try {
                 lintRequestProducer.publishLintRequest(userId, snippetId.toString())
             } catch (e: Exception) {
-                // fixme -> en lugar de romper: "el proceso debe reanudar desde dónde falló o salteando el snippet que causó la falla si hubiera. "
                 failedSnippets.add(snippetId)
                 println("Failed to queue lint request for snippet $snippetId: ${e.message}")
             }
