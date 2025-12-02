@@ -22,10 +22,14 @@ class PrintScriptClient(
 ) {
     fun validateSnippet(
         code: String,
+        configJson: String,
         version: String,
     ): ValidationResult {
         val tempFilePath = createTempFile(prefix = "snippet", suffix = ".ps")
         tempFilePath.writeText(code)
+
+        val tempConfigPath = createTempFile(prefix = "lint-config", suffix = ".json")
+        tempConfigPath.writeText(configJson)
 
         try {
             val response =
@@ -36,7 +40,7 @@ class PrintScriptClient(
                     .body(
                         BodyInserters
                             .fromMultipartData("snippet", FileSystemResource(tempFilePath.toFile()))
-                            .with("config", createDefaultLintConfig()), // JSON con reglas
+                            .with("config", FileSystemResource(tempConfigPath.toFile())),
                     ).retrieve()
                     .bodyToMono(LintResultDTO::class.java)
                     .block() ?: throw RuntimeException("No response from PrintScript service")
@@ -57,19 +61,20 @@ class PrintScriptClient(
             }
         } finally {
             tempFilePath.deleteExisting()
+            tempConfigPath.deleteExisting()
         }
     }
 
-    // todo: ver como nuestra implementacion de printscript
-    // manejaria particularmente los inputs y outputs
-
     fun executeSnippet(
         code: String,
-        input: List<String>?,
+        configJson: String,
         version: String,
     ): ExecutionResult {
         val tempFilePath = createTempFile(prefix = "snippet", suffix = ".ps")
         tempFilePath.writeText(code)
+
+        val tempConfigPath = createTempFile(prefix = "lint-config", suffix = ".json")
+        tempConfigPath.writeText(configJson)
 
         try {
             val rawResponse =
@@ -80,7 +85,7 @@ class PrintScriptClient(
                     .body(
                         BodyInserters
                             .fromMultipartData("snippet", FileSystemResource(tempFilePath.toFile()))
-                            .with("config", createDefaultLintConfig()), // todo: JSON con reglas - deberia ser nuestro getLintConfigRules()
+                            .with("config", FileSystemResource(tempConfigPath.toFile())),
                     ).retrieve()
                     .bodyToMono(String::class.java)
                     .block() ?: throw RuntimeException("No response from PrintScript service")
@@ -102,20 +107,8 @@ class PrintScriptClient(
             return ExecutionResult.Success(output = outputLines)
         } finally {
             tempFilePath.deleteExisting()
+            tempConfigPath.deleteExisting()
         }
-    }
-
-    // fixme?
-    private fun createDefaultLintConfig(): FileSystemResource {
-        val tempConfig = createTempFile(prefix = "config", suffix = ".json")
-        tempConfig.writeText(
-            """
-            {
-                "identifier_format": "camel case"
-            }
-            """.trimIndent(),
-        )
-        return FileSystemResource(tempConfig.toFile())
     }
 
     private fun extractLineNumber(message: String): Int? {
@@ -160,8 +153,7 @@ class PrintScriptClient(
                     .body(
                         BodyInserters
                             .fromMultipartData("snippet", FileSystemResource(tempFilePath.toFile()))
-                            .with("config", FileSystemResource(tempConfigPath.toFile())), // todo: JSON con reglas
-                        // - deberia ser nuestro getLintConfigRules()
+                            .with("config", FileSystemResource(tempConfigPath.toFile())),
                     ).retrieve()
                     .bodyToMono(LintResultDTO::class.java)
                     .block() ?: throw RuntimeException("No response from PrintScript service")
@@ -219,7 +211,17 @@ class PrintScriptClient(
             throw RuntimeException("Error fetching formatting rules from PrintScript service: ${ex.message}", ex)
         }
 
-    fun getLintConfigRules() {
-        TODO()
-    }
+    fun getLintConfigRules(version: String): List<RuleDto> =
+        try {
+            webClient
+                .get()
+                .uri("/api/printscript/lint/$version")
+                .retrieve()
+                .bodyToFlux(RuleDto::class.java)
+                .collectList()
+                .block()
+                ?: emptyList()
+        } catch (ex: Exception) {
+            throw RuntimeException("Error fetching linting rules from PrintScript service: ${ex.message}", ex)
+        }
 }

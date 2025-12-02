@@ -22,6 +22,7 @@ class TestService(
     private val snippetRepository: SnippetRepository,
     private val printScriptClient: PrintScriptClient,
     private val assetClient: AssetClient,
+    private val lintConfigService: LintConfigService,
 ) {
     // todo: para poder ejecutar el test, debemos pegarle al execute del printscript
     // todo: para ello, necesitamos utilizar el PrintScriptClient y usar el endpoint de ejecucion
@@ -122,6 +123,7 @@ class TestService(
     // "Call" Printscript to execute snippet and check if test passed (output coincides)
     fun runTest(
         snippetId: UUID,
+        userId: String,
         request: RunTestRequest,
     ): TestResultResponse {
         val snippet =
@@ -129,14 +131,23 @@ class TestService(
                 .findById(snippetId)
                 .orElseThrow { IllegalArgumentException("Snippet not found") }
 
+        val configJson = lintConfigService.getConfigJson(userId)
+
         val (container, key) = parseCodeUrl(snippet.codeUrl)
 
         val code = assetClient.getAsset(container, key)
 
+        val finalCode =
+            if (!request.input.isNullOrEmpty()) {
+                replaceReadInputsSimple(code, request.input)
+            } else {
+                code
+            }
+
         val executionResult =
             printScriptClient.executeSnippet(
-                code = code,
-                input = request.input ?: emptyList(),
+                code = finalCode,
+                configJson = configJson,
                 version = snippet.version,
             )
 
@@ -160,6 +171,42 @@ class TestService(
                 )
             }
         }
+    }
+
+    private fun replaceReadInputsSimple(
+        code: String,
+        inputs: List<String>,
+    ): String {
+        if (inputs.isEmpty()) return code
+
+        var inputIndex = 0
+        val pattern = Regex("readInput\\(\\)")
+
+        val result =
+            code.replace(pattern) { match ->
+                if (inputIndex >= inputs.size) {
+                    throw IllegalArgumentException(
+                        "More readInput() calls were found than inputs provided.",
+                    )
+                }
+
+                val rawValue = inputs[inputIndex++]
+
+                when {
+                    rawValue.toIntOrNull() != null -> rawValue
+                    rawValue.toDoubleOrNull() != null -> rawValue
+                    rawValue == "true" || rawValue == "false" -> rawValue
+                    else -> "\"" + rawValue.replace("\"", "\\\"") + "\""
+                }
+            }
+
+        if (inputIndex != inputs.size) {
+            throw IllegalArgumentException(
+                "More inputs (${inputs.size}) were provided than readInput() calls in the code ($inputIndex).",
+            )
+        }
+
+        return result
     }
 
     @Transactional

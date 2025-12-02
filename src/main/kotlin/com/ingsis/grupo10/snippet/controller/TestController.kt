@@ -6,6 +6,8 @@ import com.ingsis.grupo10.snippet.dto.tests.RunTestRequest
 import com.ingsis.grupo10.snippet.dto.tests.TestResultResponse
 import com.ingsis.grupo10.snippet.service.TestService
 import org.springframework.http.ResponseEntity
+import org.springframework.security.core.annotation.AuthenticationPrincipal
+import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -67,8 +69,10 @@ class TestController(
     fun runTest(
         @PathVariable snippetId: UUID,
         @RequestBody request: RunTestRequest,
+        @AuthenticationPrincipal jwt: Jwt,
     ): ResponseEntity<TestResultResponse> {
-        val result = testService.runTest(snippetId, request)
+        val userId = jwt.subject
+        val result = testService.runTest(snippetId, userId, request)
         return ResponseEntity.ok(result)
     }
 }

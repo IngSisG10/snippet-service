@@ -67,11 +67,15 @@ class SnippetService(
 
     fun createSnippet(
         request: SnippetUICreateRequest,
+        userId: String,
         snippetId: UUID,
     ): Created {
+        val configJson = lintConfigService.getConfigJson(userId)
+
         val validationResult =
             printScriptClient.validateSnippet(
                 code = request.content,
+                configJson = configJson,
                 version = "1.1",
             )
 
@@ -201,14 +205,18 @@ class SnippetService(
 
     fun updateSnippet(
         id: UUID,
+        userId: String,
         request: SnippetUIUpdateRequest,
     ): SnippetDetailDto {
+        val configJson = lintConfigService.getConfigJson(userId)
+
         val existingSnippet =
             snippetRepository.findById(id).orElseThrow { IllegalArgumentException("Snippet not found") }
 
         val validationResult =
             printScriptClient.validateSnippet(
                 code = request.content,
+                configJson = configJson,
                 version = "1.1",
             )
 
@@ -260,8 +268,6 @@ class SnippetService(
     ): SnippetDetailDto {
         val snippet = snippetRepository.findById(id).orElseThrow { IllegalArgumentException("Snippet not found") }
 
-        // TODO: Get user-specific lint config - for now use default
-        // val lintConfig = "{}" // Default config
         val lintConfig = lintConfigService.getConfigJson(userId)
 
         val (container, key) = parseCodeUrl(snippet.codeUrl)
@@ -377,7 +383,7 @@ class SnippetService(
         languageRepository.findAll().map {
             FileTypeResponse(
                 language = it.name,
-                extension = "ps", // Hardcoded for now FIXME!
+                extension = "ps",
             )
         }
 
@@ -406,8 +412,13 @@ class SnippetService(
         return snippet.toUIDetailDto(content, username)
     }
 
-    fun runSnippet(snippetId: UUID): ExecutionDto {
+    fun runSnippet(
+        userId: String,
+        snippetId: UUID,
+    ): ExecutionDto {
         val snippet = snippetRepository.findById(snippetId).orElseThrow { IllegalArgumentException("Snippet not found") }
+
+        val configJson = lintConfigService.getConfigJson(userId)
 
         val (container, key) = parseCodeUrl(snippet.codeUrl)
 
@@ -416,7 +427,7 @@ class SnippetService(
         val executionResult =
             printScriptClient.executeSnippet(
                 code = code,
-                input = emptyList(),
+                configJson = configJson,
                 version = snippet.version,
             )
 
