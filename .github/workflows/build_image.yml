@@ -1,0 +1,25 @@
+name: Build Image
+
+on:
+  workflow_dispatch: {}
+  pull_request:
+    branches:
+      - main
+      - dev
+
+jobs:
+  build:
+    name: Build image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build image from custom Dockerfile
+        run: |
+          docker build \
+            -f ./Dockerfile.prod \
+            -t temp-build-image \
+            .\
+            
