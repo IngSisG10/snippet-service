@@ -1,6 +1,5 @@
 package com.ingsis.grupo10.snippet.service
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.ingsis.grupo10.snippet.client.AssetClient
 import com.ingsis.grupo10.snippet.client.AuthClient
 import com.ingsis.grupo10.snippet.client.PrintScriptClient
@@ -43,7 +42,7 @@ class SnippetService(
     private val logService: LogService,
     private val lintConfigService: LintConfigService,
     private val formatConfigService: FormatConfigService,
-    private val objectMapper: ObjectMapper,
+    private val testExecutionProducer: com.ingsis.grupo10.snippet.producer.TestExecutionProducer,
 ) {
     fun getSnippetById(id: UUID): SnippetDetailDto {
         val snippet = snippetRepository.findById(id).orElseThrow { IllegalArgumentException("Snippet not found") }
@@ -246,6 +245,9 @@ class SnippetService(
 
                 logService.logValidation(saved, emptyList())
 
+                // Trigger test execution for all tests of this snippet
+                testExecutionProducer.publishTestExecutionRequest(saved.id.toString())
+
                 return saved.toDetailDto()
             }
         }
@@ -432,10 +434,5 @@ class SnippetService(
                 )
             }
         }
-    }
-
-    // todo
-    fun generateTestEvents(snippetId: UUID) {
-        TODO()
     }
 }

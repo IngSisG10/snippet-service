@@ -13,6 +13,7 @@ import com.ingsis.grupo10.snippet.repository.SnippetRepository
 import com.ingsis.grupo10.snippet.repository.TestRepository
 import com.ingsis.grupo10.snippet.util.AssetUtils.parseCodeUrl
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
 
 @Service
@@ -151,11 +152,68 @@ class TestService(
                 val expectedOutput = request.output ?: emptyList()
                 val actualOutput = executionResult.output
 
-                val passed = expectedOutput == actualOutput
+                val passed = expectedOutput.map { it.trim() } == actualOutput.map { it.trim() }
 
                 return TestResultResponse(
                     status = if (passed) "success" else "fail",
                     output = actualOutput,
+                )
+            }
+        }
+    }
+
+    @Transactional
+    fun runAllTestsForSnippet(snippetId: UUID): List<TestResultResponse> {
+        println("Running all tests for snippet: $snippetId")
+
+        val snippet =
+            snippetRepository
+                .findById(snippetId)
+                .orElseThrow { IllegalArgumentException("Snippet not found") }
+
+        val tests = testRepository.findBySnippetId(snippetId)
+
+        if (tests.isEmpty()) {
+            println("No tests found for snippet: $snippetId")
+            return emptyList()
+        }
+
+        val (container, key) = parseCodeUrl(snippet.codeUrl)
+        val code = assetClient.getAsset(container, key)
+
+        return tests.mapNotNull { test ->
+            try {
+                val executionResult =
+                    printScriptClient.executeSnippet(
+                        code = code,
+                        input = test.input,
+                        version = snippet.version,
+                    )
+
+                when (executionResult) {
+                    is ExecutionResult.Failed -> {
+                        val errorMessages = executionResult.errors.map { it.message }
+                        println("Test '${test.name}' failed during execution: $errorMessages")
+                        TestResultResponse(
+                            status = "error",
+                            output = errorMessages,
+                        )
+                    }
+
+                    is ExecutionResult.Success -> {
+                        val passed = test.output.map { it.trim() } == executionResult.output.map { it.trim() }
+                        println("Test '${test.name}' ${if (passed) "PASSED" else "FAILED"}")
+                        TestResultResponse(
+                            status = if (passed) "success" else "fail",
+                            output = executionResult.output,
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                println("Error running test '${test.name}': ${e.message}")
+                TestResultResponse(
+                    status = "error",
+                    output = listOf(e.message ?: "Unknown error"),
                 )
             }
         }
