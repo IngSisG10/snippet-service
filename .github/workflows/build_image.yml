@@ -21,5 +21,7 @@ jobs:
           docker build \
             -f ./Dockerfile.prod \
             -t temp-build-image \
-            .\
-            
+            --build-arg GITHUB_ACTOR=${{ github.actor }} \
+            --build-arg GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN  }} \
+            .
+
