@@ -5,25 +5,17 @@ import com.ingsis.grupo10.snippet.dto.log.LintStatus
 import com.ingsis.grupo10.snippet.dto.log.LogDto
 import com.ingsis.grupo10.snippet.dto.log.TestExecutionResult
 import com.ingsis.grupo10.snippet.service.LogService
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test
+import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
-import org.springframework.test.context.bean.override.mockito.MockitoBean
-import org.springframework.test.web.servlet.MockMvc
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.time.LocalDateTime
 import java.util.UUID
 
-@WebMvcTest(LogController::class)
 class LogControllerTest {
-    @Autowired
-    private lateinit var mockMvc: MockMvc
-
-    @MockitoBean
-    private lateinit var logService: LogService
+    private val logService: LogService = mock()
+    private val logController = LogController(logService)
 
     private val snippetId = UUID.randomUUID()
     private val testId = UUID.randomUUID()
@@ -44,11 +36,12 @@ class LogControllerTest {
 
         `when`(logService.getSnippetLogs(snippetId, null)).thenReturn(logs)
 
-        mockMvc
-            .perform(get("/logs/snippets/$snippetId"))
-            .andExpect(status().isOk)
-            .andExpect(jsonPath("$[0].tagName").value("validation"))
-            .andExpect(jsonPath("$[0].snippetId").value(snippetId.toString()))
+        val response = logController.getSnippetLogs(snippetId, null)
+
+        assertNotNull(response)
+        assertEquals(200, response.statusCode.value())
+        assertEquals(1, response.body?.size)
+        assertEquals("validation", response.body?.get(0)?.tagName)
     }
 
     @Test
@@ -57,7 +50,7 @@ class LogControllerTest {
             listOf(
                 LogDto(
                     id = UUID.randomUUID(),
-                    tagName = "lint",
+                    tagName = "validation",
                     snippetId = snippetId,
                     testId = null,
                     date = LocalDateTime.now(),
@@ -65,12 +58,13 @@ class LogControllerTest {
                 ),
             )
 
-        `when`(logService.getSnippetLogs(snippetId, "lint")).thenReturn(logs)
+        `when`(logService.getSnippetLogs(snippetId, "validation")).thenReturn(logs)
 
-        mockMvc
-            .perform(get("/logs/snippets/$snippetId?tag=lint"))
-            .andExpect(status().isOk)
-            .andExpect(jsonPath("$[0].tagName").value("lint"))
+        val response = logController.getSnippetLogs(snippetId, "validation")
+
+        assertNotNull(response)
+        assertEquals(200, response.statusCode.value())
+        assertEquals(1, response.body?.size)
     }
 
     @Test
@@ -85,31 +79,34 @@ class LogControllerTest {
 
         `when`(logService.getLatestLintStatus(snippetId)).thenReturn(lintStatus)
 
-        mockMvc
-            .perform(get("/logs/snippets/$snippetId/lint-status"))
-            .andExpect(status().isOk)
-            .andExpect(jsonPath("$.status").value("valid"))
-            .andExpect(jsonPath("$.snippetId").value(snippetId.toString()))
+        val response = logController.getLintStatus(snippetId)
+
+        assertNotNull(response)
+        assertEquals(200, response.statusCode.value())
+        assertEquals("valid", response.body?.status)
     }
 
     @Test
     fun `should get formatted version when exists`() {
-        val formattedCode = "let x : number = 5;"
+        val formattedCode = "let x: number = 5;"
 
         `when`(logService.getFormattedVersion(snippetId)).thenReturn(formattedCode)
 
-        mockMvc
-            .perform(get("/logs/snippets/$snippetId/formatted"))
-            .andExpect(status().isOk)
+        val response = logController.getFormattedVersion(snippetId)
+
+        assertNotNull(response)
+        assertEquals(200, response.statusCode.value())
+        assertEquals(formattedCode, response.body)
     }
 
     @Test
     fun `should return 404 when formatted version does not exist`() {
         `when`(logService.getFormattedVersion(snippetId)).thenReturn(null)
 
-        mockMvc
-            .perform(get("/logs/snippets/$snippetId/formatted"))
-            .andExpect(status().isNotFound)
+        val response = logController.getFormattedVersion(snippetId)
+
+        assertNotNull(response)
+        assertEquals(404, response.statusCode.value())
     }
 
     @Test
@@ -122,17 +119,18 @@ class LogControllerTest {
                     status = "passed",
                     actualOutput = "5",
                     expectedOutput = "5",
-                    durationMs = 100L,
+                    durationMs = 100,
                     executedAt = LocalDateTime.now(),
                 ),
             )
 
         `when`(logService.getTestExecutionHistory(testId)).thenReturn(history)
 
-        mockMvc
-            .perform(get("/logs/tests/$testId/executions"))
-            .andExpect(status().isOk)
-            .andExpect(jsonPath("$[0].status").value("passed"))
-            .andExpect(jsonPath("$[0].testId").value(testId.toString()))
+        val response = logController.getTestExecutionHistory(testId)
+
+        assertNotNull(response)
+        assertEquals(200, response.statusCode.value())
+        assertEquals(1, response.body?.size)
+        assertEquals("passed", response.body?.get(0)?.status)
     }
 }

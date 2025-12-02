@@ -48,10 +48,12 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation("org.austral.ingsis:redis-streams-mvc:0.1.13")
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
     runtimeOnly 'org.postgresql:postgresql'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.security:spring-security-test'
     testImplementation 'com.h2database:h2'
     testImplementation 'org.jetbrains.kotlin:kotlin-test-junit5'
     testImplementation 'org.mockito.kotlin:mockito-kotlin:5.1.0'

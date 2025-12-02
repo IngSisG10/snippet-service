@@ -1,8 +1,8 @@
 package com.ingsis.grupo10.snippet.service
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.ingsis.grupo10.snippet.dto.lintconfig.LintConfigRequest
-import com.ingsis.grupo10.snippet.dto.lintconfig.LintConfigResponse
+import com.ingsis.grupo10.snippet.dto.rules.RuleConfigRequest
+import com.ingsis.grupo10.snippet.dto.rules.RuleConfigResponse
 import com.ingsis.grupo10.snippet.models.LintConfig
 import com.ingsis.grupo10.snippet.repository.LintConfigRepository
 import org.springframework.stereotype.Service
@@ -13,7 +13,7 @@ class LintConfigService(
     private val lintConfigRepository: LintConfigRepository,
     private val objectMapper: ObjectMapper,
 ) {
-    fun getConfig(userId: String): LintConfigResponse {
+    fun getConfig(userId: String): List<RuleConfigResponse> {
         val config =
             lintConfigRepository.findByUserId(userId)
                 ?: createDefaultConfig(userId)
@@ -21,10 +21,29 @@ class LintConfigService(
         return parseConfigToResponse(config)
     }
 
+    fun getConfigJson(userId: String): String {
+        val config =
+            lintConfigRepository.findByUserId(userId)
+                ?: createDefaultConfig(userId)
+
+        // Parse the stored config: {"rule-name": {"value": X, "isActive": Y}}
+        val configMap =
+            objectMapper.readValue(config.config, Map::class.java)
+                as Map<String, Map<String, Any?>>
+
+        // Transform to printscript format: {"rule-name": X} (only active rules)
+        val simplifiedConfig =
+            configMap
+                .filter { (_, ruleData) -> ruleData["isActive"] as? Boolean ?: true }
+                .mapValues { (_, ruleData) -> ruleData["value"] }
+
+        return objectMapper.writeValueAsString(simplifiedConfig)
+    }
+
     fun updateConfig(
         userId: String,
-        request: LintConfigRequest,
-    ): LintConfigResponse {
+        request: List<RuleConfigRequest>,
+    ): List<RuleConfigResponse> {
         val existingConfig = lintConfigRepository.findByUserId(userId)
 
         val configJson = buildConfigJson(request)
@@ -49,50 +68,52 @@ class LintConfigService(
         return parseConfigToResponse(config)
     }
 
-    fun getConfigJson(userId: String): String {
-        val config =
-            lintConfigRepository.findByUserId(userId)
-                ?: createDefaultConfig(userId)
-
-        return config.config
-    }
-
     private fun createDefaultConfig(userId: String): LintConfig {
-        val defaultJson =
-            """
-            {
-                "identifier_format": "camel case"
-            }
-            """.trimIndent()
+        val defaultConfig =
+            mapOf(
+                "identifier_format" to
+                    mapOf(
+                        "value" to "camel case",
+                        "isActive" to true,
+                    ),
+            )
+
+        val json = objectMapper.writeValueAsString(defaultConfig)
 
         return lintConfigRepository.save(
             LintConfig(
                 id = UUID.randomUUID(),
                 userId = userId,
-                config = defaultJson,
+                config = json,
             ),
         )
     }
 
-    private fun buildConfigJson(request: LintConfigRequest): String {
-        val configMap = mutableMapOf<String, Any>()
-
-        request.identifierFormat?.let { configMap["identifier_format"] = it }
-        request.printlnExpressionAllowed?.let { configMap["println_expression_allowed"] = it }
-        request.readInputExpressionAllowed?.let { configMap["read_input_expression_allowed"] = it }
+    private fun buildConfigJson(request: List<RuleConfigRequest>): String {
+        val configMap =
+            request.associate { rule ->
+                rule.id to
+                    mapOf(
+                        "value" to rule.value,
+                        "isActive" to rule.isActive,
+                    )
+            }
 
         return objectMapper.writeValueAsString(configMap)
     }
 
-    private fun parseConfigToResponse(config: LintConfig): LintConfigResponse {
-        val configMap = objectMapper.readValue(config.config, Map::class.java)
+    private fun parseConfigToResponse(config: LintConfig): List<RuleConfigResponse> {
+        val configMap =
+            objectMapper.readValue(config.config, Map::class.java)
+                as Map<String, Map<String, Any?>>
 
-        return LintConfigResponse(
-            id = config.id,
-            userId = config.userId,
-            identifierFormat = configMap["identifier_format"] as? String,
-            printlnExpressionAllowed = configMap["println_expression_allowed"] as? Boolean,
-            readInputExpressionAllowed = configMap["read_input_expression_allowed"] as? Boolean,
-        )
+        return configMap.map { (key, ruleData) ->
+            RuleConfigResponse(
+                id = key,
+                name = key.split("_").joinToString(" ") { it.replaceFirstChar(Char::uppercase) },
+                isActive = ruleData["isActive"] as? Boolean ?: true,
+                value = ruleData["value"],
+            )
+        }
     }
 }
