@@ -134,7 +134,7 @@ class SnippetController(
         // Create snippet
         val created =
             try {
-                snippetService.createSnippet(request, snippetId)
+                snippetService.createSnippet(request, userId, snippetId)
             } catch (ex: Exception) {
                 // ROLLBACK: Unregister snippet if creation fails
                 authClient.unregisterSnippet(snippetId, userId)
@@ -178,34 +178,13 @@ class SnippetController(
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
         }
 
-        val updated = snippetService.updateSnippet(id, request)
+        val updated = snippetService.updateSnippet(id, userId, request)
 
         // todo: Test automaticos
         // snippetService.generateTestEvents(id)
 
         return ResponseEntity.ok(updated)
     }
-
-    // fixme
-    // todo: la logica de linting deberia de hacerla cuando crea el snippet.
-    // todo: De esa forma, es probable que podamos informar que reglas de "linting" no paso por UI!
-//    @PostMapping("/{id}/lint")
-//    fun lintSnippet(
-//        @AuthenticationPrincipal jwt: Jwt,
-//        @PathVariable id: UUID,
-//    ): ResponseEntity<Map<String, String>> {
-//        val userId = jwt.subject
-//
-//        val hasOwnerPermission = authClient.checkPermission(id, userId, "OWNER")
-//
-//        if (!hasOwnerPermission) {
-//            return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
-//        }
-//
-//        val snippet = snippetService.lintSnippet(userId ,id)
-//        return ResponseEntity.ok(snippet)
-//
-//    }
 
     @PostMapping("/{id}/format")
     fun formatSnippet(
@@ -347,9 +326,11 @@ class SnippetController(
 
     @PostMapping("/run/{id}")
     fun runSnippet(
+        @AuthenticationPrincipal jwt: Jwt,
         @PathVariable id: UUID,
     ): ResponseEntity<ExecutionDto> {
-        val response = snippetService.runSnippet(id)
+        val userId = jwt.subject
+        val response = snippetService.runSnippet(userId, id)
         return ResponseEntity.ok(response)
     }
 }

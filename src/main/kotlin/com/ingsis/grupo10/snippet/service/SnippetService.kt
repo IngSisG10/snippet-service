@@ -75,11 +75,15 @@ class SnippetService(
 
     fun createSnippet(
         request: SnippetUICreateRequest,
+        userId: String,
         snippetId: UUID,
     ): Created {
+        val configJson = lintConfigService.getConfigJson(userId)
+
         val validationResult =
             printScriptClient.validateSnippet(
                 code = request.content,
+                configJson = configJson,
                 version = "1.1",
             )
 
@@ -208,8 +212,11 @@ class SnippetService(
 
     fun updateSnippet(
         id: UUID,
+        userId: String,
         request: SnippetUIUpdateRequest,
     ): SnippetDetailDto {
+        val configJson = lintConfigService.getConfigJson(userId)
+
         val existingSnippet =
             snippetRepository
                 .findById(id)
@@ -218,6 +225,7 @@ class SnippetService(
         val validationResult =
             printScriptClient.validateSnippet(
                 code = request.content,
+                configJson = configJson,
                 version = "1.1",
             )
 
@@ -255,7 +263,7 @@ class SnippetService(
                 logService.logValidation(saved, emptyList())
 
                 // Trigger test execution for all tests of this snippet
-                testExecutionProducer.publishTestExecutionRequest(saved.id.toString())
+                testExecutionProducer.publishTestExecutionRequest(userId, saved.id.toString())
 
                 return saved.toDetailDto()
             }
@@ -269,8 +277,6 @@ class SnippetService(
     ): SnippetDetailDto {
         val snippet = snippetRepository.findById(id).orElseThrow { IllegalArgumentException("Snippet not found") }
 
-        // TODO: Get user-specific lint config - for now use default
-        // val lintConfig = "{}" // Default config
         val lintConfig = lintConfigService.getConfigJson(userId)
 
         val (container, key) = parseCodeUrl(snippet.codeUrl)
@@ -321,7 +327,6 @@ class SnippetService(
 
 
     // List Descriptors
-    // fixme: manejar casos en los cuales no tenemos "PaginatedSnippets" que mostrar.
     fun listSnippetDescriptors(
         userId: String,
         page: Int,
@@ -376,7 +381,7 @@ class SnippetService(
         languageRepository.findAll().map {
             FileTypeResponse(
                 language = it.name,
-                extension = "ps", // Hardcoded for now FIXME!
+                extension = "ps",
             )
         }
 
@@ -405,8 +410,13 @@ class SnippetService(
         return snippet.toUIDetailDto(content, username)
     }
 
-    fun runSnippet(snippetId: UUID): ExecutionDto {
+    fun runSnippet(
+        userId: String,
+        snippetId: UUID,
+    ): ExecutionDto {
         val snippet = snippetRepository.findById(snippetId).orElseThrow { IllegalArgumentException("Snippet not found") }
+
+        val configJson = lintConfigService.getConfigJson(userId)
 
         val (container, key) = parseCodeUrl(snippet.codeUrl)
 
@@ -415,7 +425,7 @@ class SnippetService(
         val executionResult =
             printScriptClient.executeSnippet(
                 code = code,
-                input = emptyList(),
+                configJson = configJson,
                 version = snippet.version,
             )
 
