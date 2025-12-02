@@ -16,8 +16,10 @@ import com.ingsis.grupo10.snippet.dto.formatconfig.FormatConfigRequest
 import com.ingsis.grupo10.snippet.dto.lintconfig.LintConfigRequest
 import com.ingsis.grupo10.snippet.dto.paginatedsnippets.PaginatedSnippetsResponse
 import com.ingsis.grupo10.snippet.dto.paginatedsnippets.SnippetResponse
-import com.ingsis.grupo10.snippet.dto.rules.RuleDto
+import com.ingsis.grupo10.snippet.dto.tests.ExecutionDto
+import com.ingsis.grupo10.snippet.dto.validation.ExecutionResult
 import com.ingsis.grupo10.snippet.dto.validation.ValidationResult
+import com.ingsis.grupo10.snippet.exception.SnippetExecutionException
 import com.ingsis.grupo10.snippet.exception.SnippetValidationException
 import com.ingsis.grupo10.snippet.extension.created
 import com.ingsis.grupo10.snippet.extension.toDetailDto
@@ -79,7 +81,7 @@ class SnippetService(
         val validationResult =
             printScriptClient.validateSnippet(
                 code = request.content,
-                version = "1.0",
+                version = "1.1",
             )
 
         when (validationResult) {
@@ -113,7 +115,7 @@ class SnippetService(
                         language = language,
                         codeUrl = codeUrl,
                         description = "",
-                        version = "1.0",
+                        version = "1.1",
                         createdAt = LocalDateTime.now(),
                         updatedAt = LocalDateTime.now(),
                     )
@@ -217,7 +219,7 @@ class SnippetService(
         val validationResult =
             printScriptClient.validateSnippet(
                 code = request.content,
-                version = "1.0",
+                version = "1.1",
             )
 
         when (validationResult) {
@@ -259,15 +261,15 @@ class SnippetService(
     }
 
     @Transactional
-    fun lintSnippet(id: UUID): SnippetDetailDto {
-        val snippet =
-            snippetRepository
-                .findById(id)
-                .orElseThrow { IllegalArgumentException("Snippet not found") }
+    fun lintSnippet(
+        userId: String,
+        id: UUID,
+    ): SnippetDetailDto {
+        val snippet = snippetRepository.findById(id).orElseThrow { IllegalArgumentException("Snippet not found") }
 
         // TODO: Get user-specific lint config - for now use default
-        val lintConfig = "{}" // Default config
-//        val lintConfig = lintConfigService.getConfigJson(userUuid)
+        // val lintConfig = "{}" // Default config
+        val lintConfig = lintConfigService.getConfigJson(userId)
 
         val (container, key) = parseCodeUrl(snippet.codeUrl)
 
@@ -286,15 +288,15 @@ class SnippetService(
     }
 
     @Transactional
-    fun formatSnippet(id: UUID): SnippetUIFormatDto {
-        val snippet =
-            snippetRepository
-                .findById(id)
-                .orElseThrow { IllegalArgumentException("Snippet not found") }
+    fun formatSnippet(
+        userId: String,
+        id: UUID,
+    ): SnippetUIFormatDto {
+        val snippet = snippetRepository.findById(id).orElseThrow { IllegalArgumentException("Snippet not found") }
 
         // TODO: Get user-specific format config - for now use default
-        val formatConfig = """{"enforce-spacing-around-equals": true}"""
-//        val formatConfig = formatConfigService.getConfigJson(userUuid)
+        // val formatConfig = """{"enforce-spacing-around-equals": true}"""
+        val formatConfig = formatConfigService.getConfigJson(userId)
 
         val (container, key) = parseCodeUrl(snippet.codeUrl)
 
@@ -317,6 +319,7 @@ class SnippetService(
 
 
     // List Descriptors
+    // fixme: manejar casos en los cuales no tenemos "PaginatedSnippets" que mostrar.
     fun listSnippetDescriptors(
         userId: String,
         page: Int,
@@ -367,83 +370,6 @@ class SnippetService(
         )
     }
 
-    // Rules
-    fun getFormattingRules(userId: String): List<RuleDto> {
-        val json = formatConfigService.getConfigJson(userId)
-        val map = objectMapper.readValue(json, Map::class.java) as Map<String, Any?>
-
-        return mapToRuleList(map)
-    }
-
-    fun getLintingRules(userId: String): List<RuleDto> {
-        val json = lintConfigService.getConfigJson(userId)
-        val map = objectMapper.readValue(json, Map::class.java) as Map<String, Any?>
-        return mapToRuleList(map)
-    }
-
-    fun updateFormattingRules(
-        rules: List<RuleDto>,
-        userId: String,
-    ) {
-        val request = rulesToFormatConfigRequest(rules)
-        formatConfigService.updateConfig(userId, request)
-    }
-
-    fun updateLintingRules(
-        rules: Map<String, Any>,
-        userId: String,
-    ) {
-        val request = rulesToLintConfigRequest(rules)
-        lintConfigService.updateConfig(userId, request)
-    }
-
-    // Helpers
-    // todo: tiralo en helpers
-    private fun mapToRuleList(config: Map<String, Any?>): List<RuleDto> =
-        config.map { (key, value) ->
-            RuleDto(
-                id = key,
-                name = formatKeyToHumanName(key),
-                isActive = true, // fixme: Why? -> siempre activas por ahora
-                value = value,
-            )
-        }
-
-    private fun formatKeyToHumanName(key: String): String = key.split("_").joinToString(" ") { it.replaceFirstChar(Char::uppercase) }
-
-    private fun rulesToFormatConfigRequest(rules: List<RuleDto>): FormatConfigRequest {
-        var spaceBeforeColon: Boolean? = null
-        var spaceAfterColon: Boolean? = null
-        var spaceAroundEquals: Boolean? = null
-        var newlineBeforePrintln: Int? = null
-        var indentInsideBlock: Int? = null
-
-        rules.forEach { rule ->
-            when (rule.id) {
-                "space_before_colon" -> spaceBeforeColon = rule.value as? Boolean
-                "space_after_colon" -> spaceAfterColon = rule.value as? Boolean
-                "space_around_equals" -> spaceAroundEquals = rule.value as? Boolean
-                "newline_before_println" -> newlineBeforePrintln = (rule.value as? Number)?.toInt()
-                "indent_inside_block" -> indentInsideBlock = (rule.value as? Number)?.toInt()
-            }
-        }
-
-        return FormatConfigRequest(
-            spaceBeforeColon = spaceBeforeColon,
-            spaceAfterColon = spaceAfterColon,
-            spaceAroundEquals = spaceAroundEquals,
-            newlineBeforePrintln = newlineBeforePrintln,
-            indentInsideBlock = indentInsideBlock,
-        )
-    }
-
-    private fun rulesToLintConfigRequest(rules: Map<String, Any>): LintConfigRequest =
-        LintConfigRequest(
-            identifierFormat = rules["identifierFormat"] as? String,
-            printlnExpressionAllowed = rules["printlnExpressionAllowed"] as? Boolean,
-            readInputExpressionAllowed = rules["readInputExpressionAllowed"] as? Boolean,
-        )
-
     fun getSupportedFileTypes(): List<FileTypeResponse> =
         languageRepository.findAll().map {
             FileTypeResponse(
@@ -475,5 +401,40 @@ class SnippetService(
         val content = assetClient.getAsset(container, key)
 
         return snippet.toUIDetailDto(content, username)
+    }
+
+    fun runSnippet(snippetId: UUID): ExecutionDto {
+        val snippet = snippetRepository.findById(snippetId).orElseThrow { IllegalArgumentException("Snippet not found") }
+
+        val (container, key) = parseCodeUrl(snippet.codeUrl)
+
+        val code = assetClient.getAsset(container, key)
+
+        val executionResult =
+            printScriptClient.executeSnippet(
+                code = code,
+                input = emptyList(),
+                version = snippet.version,
+            )
+
+        when (executionResult) {
+            is ExecutionResult.Success -> {
+                return ExecutionDto(
+                    output = executionResult.output,
+                    errors = emptyList(),
+                )
+            }
+            is ExecutionResult.Failed -> {
+                throw SnippetExecutionException(
+                    "Snippet execution failed",
+                    executionResult.errors,
+                )
+            }
+        }
+    }
+
+    // todo
+    fun generateTestEvents(snippetId: UUID) {
+        TODO()
     }
 }

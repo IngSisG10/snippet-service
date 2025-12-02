@@ -10,12 +10,10 @@ import com.ingsis.grupo10.snippet.dto.SnippetUIFormatDto
 import com.ingsis.grupo10.snippet.dto.SnippetUIUpdateRequest
 import com.ingsis.grupo10.snippet.dto.filetype.FileTypeResponse
 import com.ingsis.grupo10.snippet.dto.paginatedsnippets.PaginatedSnippetsResponse
-import com.ingsis.grupo10.snippet.dto.rules.RuleDto
-import com.ingsis.grupo10.snippet.models.Test
+import com.ingsis.grupo10.snippet.dto.tests.ExecutionDto
 import com.ingsis.grupo10.snippet.producer.FormatRequestProducer
 import com.ingsis.grupo10.snippet.producer.LintRequestProducer
 import com.ingsis.grupo10.snippet.service.SnippetService
-import com.ingsis.grupo10.snippet.service.TestCaseService
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
@@ -35,7 +33,6 @@ import java.util.UUID
 @RequestMapping("/snippets")
 class SnippetController(
     private val snippetService: SnippetService,
-    private val testCaseService: TestCaseService,
     private val authClient: AuthClient,
     private val lintRequestProducer: LintRequestProducer,
     private val formatRequestProducer: FormatRequestProducer,
@@ -175,51 +172,33 @@ class SnippetController(
         }
 
         val updated = snippetService.updateSnippet(id, request)
+
+        // todo: Test automaticos
+        // snippetService.generateTestEvents(id)
+
         return ResponseEntity.ok(updated)
     }
 
-    @PostMapping("/{id}/lint")
-    fun lintSnippet(
-        @AuthenticationPrincipal jwt: Jwt,
-        @PathVariable id: UUID,
-    ): ResponseEntity<Map<String, String>> {
-        val userId = jwt.subject
-
-        val hasOwnerPermission = authClient.checkPermission(id, userId, "OWNER")
-
-        if (!hasOwnerPermission) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
-        }
-
-        // Publicar mensaje al Redis Stream
-        lintRequestProducer.publishLintRequest(id.toString())
-
-        return ResponseEntity
-            .status(HttpStatus.ACCEPTED)
-            .body(mapOf("message" to "Lint request queued for processing"))
-    }
-
-    // TODO: Sacar este endpoint, y acceder a la lógica del formatRequestProducer.publishFormatRequest() desde el endpoint de FormatConfigController
-    @PostMapping("/{id}/auto-format")
-    fun autoFormatSnippet(
-        @AuthenticationPrincipal jwt: Jwt,
-        @PathVariable id: UUID,
-    ): ResponseEntity<Map<String, String>> {
-        val userId = jwt.subject
-
-        val hasOwnerPermission = authClient.checkPermission(id, userId, "OWNER")
-
-        if (!hasOwnerPermission) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
-        }
-
-        // Publicar mensaje al Redis Stream
-        formatRequestProducer.publishFormatRequest(id.toString())
-
-        return ResponseEntity
-            .status(HttpStatus.ACCEPTED)
-            .body(mapOf("message" to "Format request queued for processing"))
-    }
+    // fixme
+    // todo: la logica de linting deberia de hacerla cuando crea el snippet.
+    // todo: De esa forma, es probable que podamos informar que reglas de "linting" no paso por UI!
+//    @PostMapping("/{id}/lint")
+//    fun lintSnippet(
+//        @AuthenticationPrincipal jwt: Jwt,
+//        @PathVariable id: UUID,
+//    ): ResponseEntity<Map<String, String>> {
+//        val userId = jwt.subject
+//
+//        val hasOwnerPermission = authClient.checkPermission(id, userId, "OWNER")
+//
+//        if (!hasOwnerPermission) {
+//            return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
+//        }
+//
+//        val snippet = snippetService.lintSnippet(userId ,id)
+//        return ResponseEntity.ok(snippet)
+//
+//    }
 
     @PostMapping("/{id}/format")
     fun formatSnippet(
@@ -234,7 +213,7 @@ class SnippetController(
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
         }
 
-        val snippet = snippetService.formatSnippet(id)
+        val snippet = snippetService.formatSnippet(userId, id)
         return ResponseEntity.ok(snippet)
     }
 
@@ -331,70 +310,7 @@ class SnippetController(
         return ResponseEntity.ok(snippets)
     }
 
-    // TODO: add share snippet method.
-    // TODO: Add auth verification
-
     // Rules
-    @GetMapping("/rules/format")
-    fun getFormattingRules(
-        @AuthenticationPrincipal jwt: Jwt,
-    ): ResponseEntity<List<RuleDto>> {
-        val userId = jwt.subject
-        val rules = snippetService.getFormattingRules(userId)
-        return ResponseEntity.ok(rules)
-    }
-
-    @GetMapping("/rules/lint")
-    fun getLintingRules(
-        @AuthenticationPrincipal jwt: Jwt,
-    ): ResponseEntity<List<RuleDto>> {
-        val userId = jwt.subject
-        val rules = snippetService.getLintingRules(userId)
-        return ResponseEntity.ok(rules)
-    }
-
-    @PutMapping("/rules/format")
-    fun updateFormattingRules(
-        @RequestBody rules: List<RuleDto>,
-        @AuthenticationPrincipal jwt: Jwt,
-    ): ResponseEntity<Void> {
-        snippetService.updateFormattingRules(rules, jwt.subject)
-
-        return ResponseEntity.ok().build()
-    }
-
-    @PutMapping("/rules/lint")
-    fun updateLintingRules(
-        @RequestBody rules: Map<String, Any>,
-        @AuthenticationPrincipal jwt: Jwt,
-    ): ResponseEntity<Void> {
-        snippetService.updateLintingRules(rules, jwt.subject)
-        return ResponseEntity.ok().build()
-    }
-
-    // todo: Test Cases
-
-    @GetMapping("/testcases")
-    fun getTestCases(): ResponseEntity<List<Test>> {
-        val testCases = testCaseService.getTestCases()
-        return ResponseEntity.ok(testCases)
-    }
-
-    @PostMapping("/testcases")
-    fun postTestCase(
-        @RequestBody testCases: Test,
-    ): ResponseEntity<Void> {
-        testCaseService.postTestCase(testCases)
-        return ResponseEntity.ok().build()
-    }
-
-    @DeleteMapping("/testcases/{id}")
-    fun removeTestCase(
-        @PathVariable id: UUID,
-    ): ResponseEntity<Void> {
-        testCaseService.removeTestCase(id)
-        return ResponseEntity.ok().build()
-    }
 
     // File types
     @GetMapping("/filetypes")
@@ -419,6 +335,14 @@ class SnippetController(
 
         val response = snippetService.shareSnippet(username, request.snippetId, request.targetUserEmail)
 
+        return ResponseEntity.ok(response)
+    }
+
+    @PostMapping("/run/{id}")
+    fun runSnippet(
+        @PathVariable id: UUID,
+    ): ResponseEntity<ExecutionDto> {
+        val response = snippetService.runSnippet(id)
         return ResponseEntity.ok(response)
     }
 }

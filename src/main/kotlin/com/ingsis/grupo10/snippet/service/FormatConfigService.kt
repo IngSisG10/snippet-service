@@ -1,8 +1,9 @@
 package com.ingsis.grupo10.snippet.service
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.ingsis.grupo10.snippet.dto.formatconfig.FormatConfigRequest
-import com.ingsis.grupo10.snippet.dto.formatconfig.FormatConfigResponse
+import com.ingsis.grupo10.snippet.client.PrintScriptClient
+import com.ingsis.grupo10.snippet.dto.rules.RuleConfigRequest
+import com.ingsis.grupo10.snippet.dto.rules.RuleConfigResponse
 import com.ingsis.grupo10.snippet.models.FormatConfig
 import com.ingsis.grupo10.snippet.repository.FormatConfigRepository
 import org.springframework.stereotype.Service
@@ -11,9 +12,10 @@ import java.util.UUID
 @Service
 class FormatConfigService(
     private val formatConfigRepository: FormatConfigRepository,
+    private val printScriptClient: PrintScriptClient,
     private val objectMapper: ObjectMapper,
 ) {
-    fun getConfig(userId: String): FormatConfigResponse {
+    fun getConfig(userId: String): List<RuleConfigResponse> {
         val config =
             formatConfigRepository.findByUserId(userId)
                 ?: createDefaultConfig(userId)
@@ -23,11 +25,11 @@ class FormatConfigService(
 
     fun updateConfig(
         userId: String,
-        request: FormatConfigRequest,
-    ): FormatConfigResponse {
+        request: List<RuleConfigRequest>,
+    ): List<RuleConfigResponse> {
         val existingConfig = formatConfigRepository.findByUserId(userId)
 
-        val configJson = buildConfigJson(request)
+        val configJson = buildConfigJson(request) // "enforce-spacing-around-equals": {"value": true, "isActive": true}
 
         val config =
             if (existingConfig != null) {
@@ -54,53 +56,85 @@ class FormatConfigService(
             formatConfigRepository.findByUserId(userId)
                 ?: createDefaultConfig(userId)
 
-        return config.config
+        // Parse the stored config: {"rule-name": {"value": X, "isActive": Y}}
+        val configMap =
+            objectMapper.readValue(config.config, Map::class.java)
+                as Map<String, Map<String, Any?>>
+
+        // Transform to printscript format: {"rule-name": X} (only active rules)
+        val simplifiedConfig =
+            configMap
+                .filter { (_, ruleData) -> ruleData["isActive"] as? Boolean ?: true }
+                .mapValues { (_, ruleData) -> ruleData["value"] }
+
+        return objectMapper.writeValueAsString(simplifiedConfig)
     }
 
+    // todo: que agarre las rules de printscript
+    // todo: mockearlo con los nombres que deben ser
     private fun createDefaultConfig(userId: String): FormatConfig {
-        val defaultJson =
-            """
-            {
-                "space_before_colon": false,
-                "space_after_colon": true,
-                "space_around_equals": true,
-                "newline_before_println": 1,
-                "indent_inside_block": 4
+        val rules = printScriptClient.getFormatConfigRules("1.1")
+
+        val configMap =
+            rules.associate { rule ->
+                val defaultValue =
+                    rule.data.firstOrNull()?.default ?: "true"
+
+                val value: Any =
+                    when (rule.data.firstOrNull()?.type) {
+                        "Boolean" -> defaultValue.toBoolean()
+                        "Number" -> defaultValue.toIntOrNull() ?: defaultValue
+                        else -> defaultValue
+                    }
+
+                rule.name to
+                    mapOf(
+                        "value" to value,
+                        "isActive" to true,
+                    )
             }
-            """.trimIndent()
+
+        val json = objectMapper.writeValueAsString(configMap)
 
         return formatConfigRepository.save(
             FormatConfig(
                 id = UUID.randomUUID(),
                 userId = userId,
-                config = defaultJson,
+                config = json,
             ),
         )
     }
 
-    private fun buildConfigJson(request: FormatConfigRequest): String {
-        val configMap = mutableMapOf<String, Any>()
-
-        request.spaceBeforeColon?.let { configMap["space_before_colon"] = it }
-        request.spaceAfterColon?.let { configMap["space_after_colon"] = it }
-        request.spaceAroundEquals?.let { configMap["space_around_equals"] = it }
-        request.newlineBeforePrintln?.let { configMap["newline_before_println"] = it }
-        request.indentInsideBlock?.let { configMap["indent_inside_block"] = it }
+    private fun buildConfigJson(request: List<RuleConfigRequest>): String {
+        val configMap =
+            request.associate { rule ->
+                rule.id to
+                    mapOf(
+                        "value" to rule.value,
+                        "isActive" to rule.isActive,
+                    )
+            }
 
         return objectMapper.writeValueAsString(configMap)
     }
 
-    private fun parseConfigToResponse(config: FormatConfig): FormatConfigResponse {
-        val configMap = objectMapper.readValue(config.config, Map::class.java)
+    private fun parseConfigToResponse(config: FormatConfig): List<RuleConfigResponse> {
+        val configMap =
+            objectMapper.readValue(config.config, Map::class.java)
+                as Map<String, Map<String, Any?>>
 
-        return FormatConfigResponse(
-            id = config.id,
-            userId = config.userId,
-            spaceBeforeColon = configMap["space_before_colon"] as? Boolean,
-            spaceAfterColon = configMap["space_after_colon"] as? Boolean,
-            spaceAroundEquals = configMap["space_around_equals"] as? Boolean,
-            newlineBeforePrintln = (configMap["newline_before_println"] as? Number)?.toInt(),
-            indentInsideBlock = (configMap["indent_inside_block"] as? Number)?.toInt(),
-        )
+        return configMap.map { (key, ruleData) ->
+            RuleConfigResponse(
+                id = key,
+                name =
+                    key
+                        .replace("-", " ")
+                        .replace("_", " ")
+                        .split(" ")
+                        .joinToString(" ") { it.replaceFirstChar(Char::uppercase) },
+                isActive = ruleData["isActive"] as? Boolean ?: true,
+                value = ruleData["value"],
+            )
+        }
     }
 }

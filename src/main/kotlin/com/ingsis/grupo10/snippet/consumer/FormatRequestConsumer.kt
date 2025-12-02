@@ -40,11 +40,15 @@ class FormatRequestConsumer
 
             try {
                 val snippetId = UUID.fromString(request.snippetId)
+                val userId = request.userId
 
                 // Llamar al servicio existente que hace el formateo
-                snippetService.formatSnippet(snippetId)
+                snippetService.formatSnippet(userId, snippetId)
 
                 println("Format request processed successfully for snippet: ${request.snippetId}")
+            } catch (e: IllegalArgumentException) {
+                println("Skipping format request - snippet not found: ${request.snippetId}")
+                println("This might happen if the snippet was deleted after the format request was queued")
             } catch (e: Exception) {
                 println("Error processing format request: ${e.message}")
                 e.printStackTrace()
