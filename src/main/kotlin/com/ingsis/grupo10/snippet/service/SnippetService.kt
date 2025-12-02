@@ -68,11 +68,13 @@ class SnippetService(
 
     fun createSnippet(
         request: SnippetUICreateRequest,
+        userId: String,
         snippetId: UUID,
     ): Created {
         val validationResult =
             printScriptClient.validateSnippet(
                 code = request.content,
+                userId = userId,
                 version = "1.1",
             )
 
@@ -202,6 +204,7 @@ class SnippetService(
 
     fun updateSnippet(
         id: UUID,
+        userId: String,
         request: SnippetUIUpdateRequest,
     ): SnippetDetailDto {
         val existingSnippet =
@@ -210,6 +213,7 @@ class SnippetService(
         val validationResult =
             printScriptClient.validateSnippet(
                 code = request.content,
+                userId = userId,
                 version = "1.1",
             )
 
@@ -375,7 +379,7 @@ class SnippetService(
         languageRepository.findAll().map {
             FileTypeResponse(
                 language = it.name,
-                extension = "ps", // Hardcoded for now FIXME!
+                extension = "ps",
             )
         }
 
@@ -404,7 +408,10 @@ class SnippetService(
         return snippet.toUIDetailDto(content, username)
     }
 
-    fun runSnippet(snippetId: UUID): ExecutionDto {
+    fun runSnippet(
+        userId: String,
+        snippetId: UUID,
+    ): ExecutionDto {
         val snippet = snippetRepository.findById(snippetId).orElseThrow { IllegalArgumentException("Snippet not found") }
 
         val (container, key) = parseCodeUrl(snippet.codeUrl)
@@ -414,6 +421,7 @@ class SnippetService(
         val executionResult =
             printScriptClient.executeSnippet(
                 code = code,
+                userId = userId,
                 version = snippet.version,
             )
 
