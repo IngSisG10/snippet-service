@@ -27,6 +27,8 @@ class Snippet(
     val updatedAt: LocalDateTime,
     @OneToMany(mappedBy = "snippet", cascade = [CascadeType.REMOVE], orphanRemoval = true)
     val logs: Set<Log> = emptySet(),
+    @OneToMany(mappedBy = "snippet", cascade = [CascadeType.REMOVE], orphanRemoval = true)
+    val tests: Set<Test> = emptySet(),
 ) {
     override fun hashCode(): Int = id.hashCode()
 
