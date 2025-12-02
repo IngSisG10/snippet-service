@@ -1,19 +1,26 @@
 package com.ingsis.grupo10.snippet.snippet.controller
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.ingsis.grupo10.snippet.controller.SnippetController
+import com.ingsis.grupo10.snippet.client.AuthClient
 import com.ingsis.grupo10.snippet.dto.Created
-import com.ingsis.grupo10.snippet.dto.SnippetCreateRequest
 import com.ingsis.grupo10.snippet.dto.SnippetDetailDto
 import com.ingsis.grupo10.snippet.dto.SnippetSummaryDto
+import com.ingsis.grupo10.snippet.dto.SnippetUICreateRequest
+import com.ingsis.grupo10.snippet.dto.SnippetUIDetailDto
+import com.ingsis.grupo10.snippet.dto.SnippetUIFormatDto
+import com.ingsis.grupo10.snippet.dto.SnippetUIUpdateRequest
+import com.ingsis.grupo10.snippet.producer.LintRequestProducer
 import com.ingsis.grupo10.snippet.service.SnippetService
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.`when`
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
+import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.http.MediaType
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
@@ -25,7 +32,8 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.time.LocalDateTime
 import java.util.UUID
 
-@WebMvcTest(SnippetController::class)
+@SpringBootTest
+@AutoConfigureMockMvc
 class SnippetControllerTest {
     @Autowired
     private lateinit var mockMvc: MockMvc
@@ -36,7 +44,14 @@ class SnippetControllerTest {
     @MockitoBean
     private lateinit var snippetService: SnippetService
 
+    @MockitoBean
+    private lateinit var authClient: AuthClient
+
+    @MockitoBean
+    private lateinit var lintRequestProducer: LintRequestProducer
+
     private val testId = UUID.randomUUID()
+    private val testUserId = "test-user-123"
 
     @Test
     fun `should get all snippets`() {
@@ -56,7 +71,7 @@ class SnippetControllerTest {
             .thenReturn(snippets)
 
         mockMvc
-            .perform(get("/snippets"))
+            .perform(get("/snippets").with(jwt().jwt { it.subject(testUserId) }))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$[0].name").value("Test Snippet"))
             .andExpect(jsonPath("$[0].language").value("PrintScript"))
@@ -65,47 +80,49 @@ class SnippetControllerTest {
     @Test
     fun `should get snippet by id`() {
         val snippetId = testId
-        val container = "snippets"
-        val codeUrl = "$container/$snippetId"
+        val username = "test-user"
 
         val snippet =
-            SnippetDetailDto(
+            SnippetUIDetailDto(
                 id = snippetId,
                 name = "Test Snippet",
-                description = "Test description",
-                codeUrl = codeUrl,
+                content = "let x: number = 5;",
+                extension = "ps",
                 language = "PrintScript",
-                version = "1.1",
-                createdAt = LocalDateTime.now(),
+                compliance = LocalDateTime.now(),
+                author = username,
             )
 
-        `when`(snippetService.getSnippetById(snippetId)).thenReturn(snippet)
+        `when`(snippetService.getUISnippetById(snippetId, username)).thenReturn(snippet)
 
         mockMvc
-            .perform(get("/snippets/$snippetId"))
-            .andExpect(status().isOk)
+            .perform(
+                get("/snippets/$snippetId").with(
+                    jwt().jwt {
+                        it.subject(testUserId)
+                        it.claim("https://your-app.com/name", username)
+                    },
+                ),
+            ).andExpect(status().isOk)
             .andExpect(jsonPath("$.name").value("Test Snippet"))
-            .andExpect(jsonPath("$.codeUrl").value(codeUrl))
     }
 
     @Test
     fun `should create snippet`() {
-        val snippetId = testId
-        val container = "snippets"
-        val codeUrl = "$container/$snippetId"
+        `when`(authClient.checkUserExists(any())).thenReturn(true)
+        `when`(authClient.registerSnippet(any(), any())).thenReturn(true)
 
         val request =
-            SnippetCreateRequest(
+            SnippetUICreateRequest(
                 name = "New Snippet",
-                description = "Description",
-                code = "let x: number = 5;",
-                languageName = "PrintScript",
-                version = "1.1",
+                content = "let x: number = 5;",
+                extension = "ps",
+                language = "PrintScript",
             )
 
         val response =
             Created(
-                id = snippetId.toString(),
+                id = "test-id",
             )
 
         `when`(snippetService.createSnippet(anyOrNull(), anyOrNull())).thenReturn(response)
@@ -113,22 +130,20 @@ class SnippetControllerTest {
         mockMvc
             .perform(
                 post("/snippets/create")
+                    .with(jwt().jwt { it.subject(testUserId) })
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(request)),
             ).andExpect(status().isOk)
-            .andExpect(jsonPath("$.name").value("New Snippet"))
-            .andExpect(jsonPath("$.codeUrl").value(codeUrl))
+            .andExpect(jsonPath("$.id").value("test-id"))
     }
 
     @Test
     fun `should update snippet`() {
+        `when`(authClient.checkPermission(any(), any(), any())).thenReturn(true)
+
         val request =
-            SnippetCreateRequest(
-                name = "Updated Snippet",
-                description = "Updated description",
-                code = "let y: number = 10;",
-                languageName = "PrintScript",
-                version = "1.1",
+            SnippetUIUpdateRequest(
+                content = "let y: number = 10;",
             )
 
         val response =
@@ -148,6 +163,7 @@ class SnippetControllerTest {
         mockMvc
             .perform(
                 put("/snippets/$testId")
+                    .with(jwt().jwt { it.subject(testUserId) })
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(request)),
             ).andExpect(status().isOk)
@@ -156,52 +172,39 @@ class SnippetControllerTest {
 
     @Test
     fun `should delete snippet`() {
+        `when`(authClient.checkPermission(any(), any(), any())).thenReturn(true)
+
         mockMvc
-            .perform(delete("/snippets/$testId"))
+            .perform(delete("/snippets/$testId").with(jwt().jwt { it.subject(testUserId) }))
             .andExpect(status().isOk)
     }
 
     @Test
+    @Disabled("Endpoint is commented out in SnippetController")
     fun `should lint snippet`() {
-        val response =
-            SnippetDetailDto(
-                id = testId,
-                name = "Test Snippet",
-                description = "Test",
-                codeUrl = "snippets/$testId",
-                language = "PrintScript",
-                version = "1.1",
-                createdAt = LocalDateTime.now(),
-            )
-
-        `when`(snippetService.lintSnippet(any()))
-            .thenReturn(response)
+        `when`(authClient.checkPermission(any(), any(), any())).thenReturn(true)
 
         mockMvc
-            .perform(post("/snippets/$testId/lint"))
-            .andExpect(status().isOk)
-            .andExpect(jsonPath("$.name").value("Test Snippet"))
+            .perform(post("/snippets/$testId/lint").with(jwt().jwt { it.subject(testUserId) }))
+            .andExpect(status().isAccepted)
+            .andExpect(jsonPath("$.message").value("Lint request queued for processing"))
     }
 
     @Test
     fun `should format snippet`() {
+        `when`(authClient.checkPermission(any(), any(), any())).thenReturn(true)
+
         val response =
-            SnippetDetailDto(
-                id = testId,
-                name = "Test Snippet",
-                description = "Test",
-                codeUrl = "snippets/$testId",
-                language = "PrintScript",
-                version = "1.1",
-                createdAt = LocalDateTime.now(),
+            SnippetUIFormatDto(
+                content = "let x: number = 5;",
             )
 
-        `when`(snippetService.formatSnippet(any()))
+        `when`(snippetService.formatSnippet(any(), any()))
             .thenReturn(response)
 
         mockMvc
-            .perform(post("/snippets/$testId/format"))
+            .perform(post("/snippets/$testId/format").with(jwt().jwt { it.subject(testUserId) }))
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.name").value("Test Snippet"))
+            .andExpect(jsonPath("$.content").value("let x: number = 5;"))
     }
 }

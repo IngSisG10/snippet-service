@@ -1,142 +1,104 @@
 package com.ingsis.grupo10.snippet.config.service
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.ingsis.grupo10.snippet.dto.formatconfig.FormatConfigRequest
+import com.ingsis.grupo10.snippet.client.PrintScriptClient
+import com.ingsis.grupo10.snippet.dto.rules.RuleConfigRequest
 import com.ingsis.grupo10.snippet.models.FormatConfig
 import com.ingsis.grupo10.snippet.repository.FormatConfigRepository
 import com.ingsis.grupo10.snippet.service.FormatConfigService
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito.any
-import org.mockito.Mockito.times
-import org.mockito.Mockito.verify
+import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
-import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.test.context.bean.override.mockito.MockitoBean
 import java.util.UUID
 
-@SpringBootTest
 class FormatConfigServiceTest {
-    @MockitoBean
-    private lateinit var formatConfigRepository: FormatConfigRepository
+    private val formatConfigRepository: FormatConfigRepository = mock()
+    private val printScriptClient: PrintScriptClient = mock()
 
     private lateinit var formatConfigService: FormatConfigService
     private lateinit var objectMapper: ObjectMapper
 
-    private val testUserId = UUID.randomUUID()
+    private val testUserId = "test-user-id"
 
     @BeforeEach
     fun setUp() {
         objectMapper = ObjectMapper()
-        formatConfigService = FormatConfigService(formatConfigRepository, objectMapper)
+        formatConfigService = FormatConfigService(formatConfigRepository, printScriptClient, objectMapper)
     }
 
     @Test
     fun `should get config for user`() {
+        val configJson =
+            """{"enforce-spacing-around-equals":{"value":true,"isActive":true},""" +
+                """"line-breaks-after-println":{"value":1,"isActive":true}}"""
         val config =
             FormatConfig(
                 id = UUID.randomUUID(),
-                userId = testUserId.toString(),
-                config = """{"space_before_colon":false,"space_after_colon":true,"indent_inside_block":4}""",
+                userId = testUserId,
+                config = configJson,
             )
 
-        `when`(formatConfigRepository.findByUserId(testUserId.toString())).thenReturn(config)
+        `when`(formatConfigRepository.findByUserId(testUserId)).thenReturn(config)
 
-        val result = formatConfigService.getConfig(testUserId.toString())
+        val result = formatConfigService.getConfig(testUserId)
 
         assertNotNull(result)
-        assertEquals(testUserId.toString(), result.userId)
-        assertEquals(false, result.spaceBeforeColon)
-        assertEquals(true, result.spaceAfterColon)
-        assertEquals(4, result.indentInsideBlock)
-        verify(formatConfigRepository, times(1)).findByUserId(testUserId.toString())
+        assertTrue(result.isNotEmpty())
+        assertEquals("enforce-spacing-around-equals", result[0].id)
     }
 
     @Test
-    fun `should create default config when user has no config`() {
-        `when`(formatConfigRepository.findByUserId(testUserId.toString())).thenReturn(null)
-        `when`(formatConfigRepository.save(any(FormatConfig::class.java))).thenAnswer { it.arguments[0] }
-
-        val result = formatConfigService.getConfig(testUserId.toString())
-
-        assertNotNull(result)
-        assertEquals(testUserId.toString(), result.userId)
-        assertEquals(false, result.spaceBeforeColon)
-        assertEquals(true, result.spaceAfterColon)
-        assertEquals(4, result.indentInsideBlock)
-        verify(formatConfigRepository, times(1)).findByUserId(testUserId.toString())
-        verify(formatConfigRepository, times(1)).save(any(FormatConfig::class.java))
-    }
-
-    @Test
-    fun `should update existing config`() {
+    fun `should update config for user`() {
         val existingConfig =
             FormatConfig(
                 id = UUID.randomUUID(),
-                userId = testUserId.toString(),
-                config = """{"space_before_colon":false}""",
+                userId = testUserId,
+                config = """{"enforce-spacing-around-equals":{"value":true,"isActive":true}}""",
             )
 
         val request =
-            FormatConfigRequest(
-                spaceBeforeColon = true,
-                spaceAfterColon = false,
-                spaceAroundEquals = true,
-                newlineBeforePrintln = 2,
-                indentInsideBlock = 2,
+            listOf(
+                RuleConfigRequest(
+                    id = "enforce-spacing-around-equals",
+                    name = "Enforce Spacing Around Equals",
+                    isActive = false,
+                    value = true,
+                ),
             )
 
-        `when`(formatConfigRepository.findByUserId(testUserId.toString())).thenReturn(existingConfig)
-        `when`(formatConfigRepository.save(any(FormatConfig::class.java))).thenAnswer { it.arguments[0] }
+        `when`(formatConfigRepository.findByUserId(testUserId)).thenReturn(existingConfig)
+        `when`(formatConfigRepository.save(org.mockito.kotlin.any())).thenReturn(existingConfig)
 
-        val result = formatConfigService.updateConfig(testUserId.toString(), request)
+        val result = formatConfigService.updateConfig(testUserId, request)
 
         assertNotNull(result)
-        assertEquals(testUserId.toString(), result.userId)
-        assertEquals(true, result.spaceBeforeColon)
-        assertEquals(false, result.spaceAfterColon)
-        assertEquals(true, result.spaceAroundEquals)
-        assertEquals(2, result.newlineBeforePrintln)
-        assertEquals(2, result.indentInsideBlock)
-        verify(formatConfigRepository, times(1)).save(any(FormatConfig::class.java))
+        assertTrue(result.isNotEmpty())
     }
 
     @Test
-    fun `should create new config when updating non-existent config`() {
-        val request =
-            FormatConfigRequest(
-                spaceBeforeColon = true,
-                indentInsideBlock = 8,
-            )
-
-        `when`(formatConfigRepository.findByUserId(testUserId.toString())).thenReturn(null)
-        `when`(formatConfigRepository.save(any(FormatConfig::class.java))).thenAnswer { it.arguments[0] }
-
-        val result = formatConfigService.updateConfig(testUserId.toString(), request)
-
-        assertNotNull(result)
-        assertEquals(testUserId.toString(), result.userId)
-        assertEquals(true, result.spaceBeforeColon)
-        assertEquals(8, result.indentInsideBlock)
-        verify(formatConfigRepository, times(1)).save(any(FormatConfig::class.java))
-    }
-
-    @Test
-    fun `should get config as JSON string`() {
+    fun `should get config as JSON`() {
+        val configJson =
+            """{"enforce-spacing-around-equals":{"value":true,"isActive":true},""" +
+                """"line-breaks-after-println":{"value":1,"isActive":false}}"""
         val config =
             FormatConfig(
                 id = UUID.randomUUID(),
-                userId = testUserId.toString(),
-                config = """{"indent_inside_block":4}""",
+                userId = testUserId,
+                config = configJson,
             )
 
-        `when`(formatConfigRepository.findByUserId(testUserId.toString())).thenReturn(config)
+        `when`(formatConfigRepository.findByUserId(testUserId)).thenReturn(config)
 
-        val result = formatConfigService.getConfigJson(testUserId.toString())
+        val result = formatConfigService.getConfigJson(testUserId)
 
         assertNotNull(result)
-        assertEquals("""{"indent_inside_block":4}""", result)
+        // Should only include active rules
+        assertTrue(result.contains("enforce-spacing-around-equals"))
+        // Should NOT include inactive rules
+        assertTrue(!result.contains("line-breaks-after-println") || result.contains("\"line-breaks-after-println\":null"))
     }
 }

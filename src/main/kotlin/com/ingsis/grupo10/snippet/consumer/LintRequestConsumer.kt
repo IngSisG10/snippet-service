@@ -40,7 +40,9 @@ class LintRequestConsumer
 
             try {
                 val snippetId = UUID.fromString(request.snippetId)
-                snippetService.lintSnippet(snippetId)
+                val userId = request.userId
+
+                snippetService.lintSnippet(userId, snippetId)
                 println("Lint request processed successfully for snippet: ${request.snippetId}")
             } catch (e: Exception) {
                 println("Error processing lint request: ${e.message}")
