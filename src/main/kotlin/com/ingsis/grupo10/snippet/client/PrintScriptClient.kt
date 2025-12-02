@@ -60,12 +60,8 @@ class PrintScriptClient(
         }
     }
 
-    // todo: ver como nuestra implementacion de printscript
-    // manejaria particularmente los inputs y outputs
-
     fun executeSnippet(
         code: String,
-        input: List<String>?,
         version: String,
     ): ExecutionResult {
         val tempFilePath = createTempFile(prefix = "snippet", suffix = ".ps")

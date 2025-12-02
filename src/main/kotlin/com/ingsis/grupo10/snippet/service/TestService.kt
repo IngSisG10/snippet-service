@@ -132,10 +132,16 @@ class TestService(
 
         val code = assetClient.getAsset(container, key)
 
+        val finalCode =
+            if (!request.input.isNullOrEmpty()) {
+                replaceReadInputsSimple(code, request.input)
+            } else {
+                code
+            }
+
         val executionResult =
             printScriptClient.executeSnippet(
-                code = code,
-                input = request.input ?: emptyList(),
+                code = finalCode,
                 version = snippet.version,
             )
 
@@ -159,5 +165,41 @@ class TestService(
                 )
             }
         }
+    }
+
+    private fun replaceReadInputsSimple(
+        code: String,
+        inputs: List<String>,
+    ): String {
+        if (inputs.isEmpty()) return code
+
+        var inputIndex = 0
+        val pattern = Regex("readInput\\(\\)")
+
+        val result =
+            code.replace(pattern) { match ->
+                if (inputIndex >= inputs.size) {
+                    throw IllegalArgumentException(
+                        "More readInput() calls were found than inputs provided.",
+                    )
+                }
+
+                val rawValue = inputs[inputIndex++]
+
+                when {
+                    rawValue.toIntOrNull() != null -> rawValue
+                    rawValue.toDoubleOrNull() != null -> rawValue
+                    rawValue == "true" || rawValue == "false" -> rawValue
+                    else -> "\"" + rawValue.replace("\"", "\\\"") + "\""
+                }
+            }
+
+        if (inputIndex != inputs.size) {
+            throw IllegalArgumentException(
+                "More inputs (${inputs.size}) were provided than readInput() calls in the code ($inputIndex).",
+            )
+        }
+
+        return result
     }
 }

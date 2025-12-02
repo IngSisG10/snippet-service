@@ -414,7 +414,6 @@ class SnippetService(
         val executionResult =
             printScriptClient.executeSnippet(
                 code = code,
-                input = emptyList(),
                 version = snippet.version,
             )
 
