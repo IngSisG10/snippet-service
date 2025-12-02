@@ -16,10 +16,7 @@ class FormatConfigService(
     private val objectMapper: ObjectMapper,
 ) {
     fun getConfig(userId: String): List<RuleConfigResponse> {
-        val config =
-            formatConfigRepository.findByUserId(userId)
-                ?: createDefaultConfig(userId)
-
+        val config = mergeWithPrintScriptRules(userId)
         return parseConfigToResponse(config)
     }
 
@@ -52,9 +49,7 @@ class FormatConfigService(
     }
 
     fun getConfigJson(userId: String): String {
-        val config =
-            formatConfigRepository.findByUserId(userId)
-                ?: createDefaultConfig(userId)
+        val config = mergeWithPrintScriptRules(userId)
 
         // Parse the stored config: {"rule-name": {"value": X, "isActive": Y}}
         val configMap =
@@ -70,39 +65,69 @@ class FormatConfigService(
         return objectMapper.writeValueAsString(simplifiedConfig)
     }
 
-    // todo: que agarre las rules de printscript
-    // todo: mockearlo con los nombres que deben ser
-    private fun createDefaultConfig(userId: String): FormatConfig {
+    private fun mergeWithPrintScriptRules(userId: String): FormatConfig {
+        // Always fetch the latest rules from PrintScript
         val rules = printScriptClient.getFormatConfigRules("1.1")
 
-        val configMap =
-            rules.associate { rule ->
-                val defaultValue =
-                    rule.data.firstOrNull()?.default ?: "true"
+        // Create a base config map with all rules from PrintScript with default values
+        val baseConfigMap: MutableMap<String, Map<String, Any?>> =
+            rules
+                .associate { rule ->
+                    val defaultValue =
+                        rule.data.firstOrNull()?.default ?: "true"
 
-                val value: Any =
-                    when (rule.data.firstOrNull()?.type) {
-                        "Boolean" -> defaultValue.toBoolean()
-                        "Number" -> defaultValue.toIntOrNull() ?: defaultValue
-                        else -> defaultValue
+                    val value: Any =
+                        when (rule.data.firstOrNull()?.type) {
+                            "Boolean" -> defaultValue.toBoolean()
+                            "Number" -> defaultValue.toIntOrNull() ?: defaultValue
+                            else -> defaultValue
+                        }
+
+                    rule.name to
+                        mapOf(
+                            "value" to value,
+                            "isActive" to true,
+                        )
+                }.toMutableMap()
+
+        // Try to find existing user config
+        val existingConfig = formatConfigRepository.findByUserId(userId)
+
+        // If user has custom config, merge it with the base config
+        val finalConfigMap =
+            if (existingConfig != null) {
+                val userConfigMap =
+                    objectMapper.readValue(existingConfig.config, Map::class.java)
+                        as Map<String, Map<String, Any?>>
+
+                // Override with user's custom values where they exist
+                userConfigMap.forEach { (ruleName, userData) ->
+                    if (baseConfigMap.containsKey(ruleName)) {
+                        baseConfigMap[ruleName] = userData
                     }
+                }
 
-                rule.name to
-                    mapOf(
-                        "value" to value,
-                        "isActive" to true,
-                    )
+                baseConfigMap
+            } else {
+                baseConfigMap
             }
 
-        val json = objectMapper.writeValueAsString(configMap)
+        val json = objectMapper.writeValueAsString(finalConfigMap)
 
-        return formatConfigRepository.save(
-            FormatConfig(
-                id = UUID.randomUUID(),
-                userId = userId,
-                config = json,
-            ),
-        )
+        // Save or update the config
+        return if (existingConfig != null) {
+            formatConfigRepository.save(
+                existingConfig.copy(config = json),
+            )
+        } else {
+            formatConfigRepository.save(
+                FormatConfig(
+                    id = UUID.randomUUID(),
+                    userId = userId,
+                    config = json,
+                ),
+            )
+        }
     }
 
     private fun buildConfigJson(request: List<RuleConfigRequest>): String {
