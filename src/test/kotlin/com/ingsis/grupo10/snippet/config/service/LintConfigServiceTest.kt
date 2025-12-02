@@ -11,6 +11,9 @@ import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import com.ingsis.grupo10.snippet.dto.rules.DataItem
+import com.ingsis.grupo10.snippet.dto.rules.RuleDto
+import org.mockito.ArgumentMatchers.anyString
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
 import java.util.UUID
@@ -27,6 +30,10 @@ class LintConfigServiceTest {
     @BeforeEach
     fun setUp() {
         objectMapper = ObjectMapper()
+        printScriptClient = mock()
+        val dataItem = DataItem("camelCase", "camelCase", "string")
+        val rule = RuleDto("identifier_format", listOf(dataItem))
+        `when`(printScriptClient.getLintConfigRules(anyString())).thenReturn(listOf(rule))
         lintConfigService = LintConfigService(lintConfigRepository, printScriptClient, objectMapper)
     }
 
@@ -40,6 +47,7 @@ class LintConfigServiceTest {
             )
 
         `when`(lintConfigRepository.findByUserId(testUserId)).thenReturn(config)
+        `when`(lintConfigRepository.save(org.mockito.kotlin.any())).thenAnswer { it.arguments[0] }
 
         val result = lintConfigService.getConfig(testUserId)
 
@@ -120,6 +128,7 @@ class LintConfigServiceTest {
             )
 
         `when`(lintConfigRepository.findByUserId(testUserId)).thenReturn(config)
+        `when`(lintConfigRepository.save(org.mockito.kotlin.any())).thenAnswer { it.arguments[0] }
 
         val result = lintConfigService.getConfigJson(testUserId)
 
