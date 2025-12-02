@@ -295,4 +295,15 @@ class LogService(
 
         return errors
     }
+
+    fun getSnippetIdsByCompliance(snippetIds: List<UUID>, compliance: String): List<UUID> {
+        if (compliance == "all") {
+            return snippetIds
+        }
+
+        return snippetIds.filter { snippetId ->
+            val lintStatus = getLatestLintStatus(snippetId)
+            lintStatus.status == compliance
+        }
+    }
 }

@@ -11,6 +11,8 @@ import com.ingsis.grupo10.snippet.dto.SnippetUIDetailDto
 import com.ingsis.grupo10.snippet.dto.SnippetUIFormatDto
 import com.ingsis.grupo10.snippet.dto.SnippetUIUpdateRequest
 import com.ingsis.grupo10.snippet.dto.filetype.FileTypeResponse
+import com.ingsis.grupo10.snippet.dto.formatconfig.FormatConfigRequest
+import com.ingsis.grupo10.snippet.dto.lintconfig.LintConfigRequest
 import com.ingsis.grupo10.snippet.dto.paginatedsnippets.PaginatedSnippetsResponse
 import com.ingsis.grupo10.snippet.dto.paginatedsnippets.SnippetResponse
 import com.ingsis.grupo10.snippet.dto.tests.ExecutionDto
@@ -45,7 +47,10 @@ class SnippetService(
     private val testExecutionProducer: com.ingsis.grupo10.snippet.producer.TestExecutionProducer,
 ) {
     fun getSnippetById(id: UUID): SnippetDetailDto {
-        val snippet = snippetRepository.findById(id).orElseThrow { IllegalArgumentException("Snippet not found") }
+        val snippet =
+            snippetRepository
+                .findById(id)
+                .orElseThrow { IllegalArgumentException("Snippet not found") }
 
         return snippet.toDetailDto()
     }
@@ -54,7 +59,10 @@ class SnippetService(
         id: UUID,
         username: String,
     ): SnippetUIDetailDto {
-        val snippet = snippetRepository.findById(id).orElseThrow { IllegalArgumentException("Snippet not found") }
+        val snippet =
+            snippetRepository
+                .findById(id)
+                .orElseThrow { IllegalArgumentException("Snippet not found") }
 
         val content =
             run {
@@ -169,28 +177,24 @@ class SnippetService(
                     } else {
                         snippets.sortedBy { it.name }
                     }
-
                 "language" ->
                     if (sortDirection?.uppercase() == "DESC") {
                         snippets.sortedByDescending { it.language }
                     } else {
                         snippets.sortedBy { it.language }
                     }
-
                 "compliance" ->
                     if (sortDirection?.uppercase() == "DESC") {
                         snippets.sortedByDescending { it.compliance ?: "" }
                     } else {
                         snippets.sortedBy { it.compliance ?: "" }
                     }
-
                 "createdat" ->
                     if (sortDirection?.uppercase() == "DESC") {
                         snippets.sortedByDescending { it.createdAt }
                     } else {
                         snippets.sortedBy { it.createdAt }
                     }
-
                 else -> snippets // No sorting or default order
             }
 
@@ -198,7 +202,10 @@ class SnippetService(
     }
 
     fun deleteSnippetById(id: UUID) {
-        val snippet = snippetRepository.findById(id).orElseThrow { IllegalArgumentException("Snippet not found") }
+        val snippet =
+            snippetRepository
+                .findById(id)
+                .orElseThrow { IllegalArgumentException("Snippet not found") }
 
         snippetRepository.deleteById(id)
     }
@@ -211,7 +218,9 @@ class SnippetService(
         val configJson = lintConfigService.getConfigJson(userId)
 
         val existingSnippet =
-            snippetRepository.findById(id).orElseThrow { IllegalArgumentException("Snippet not found") }
+            snippetRepository
+                .findById(id)
+                .orElseThrow { IllegalArgumentException("Snippet not found") }
 
         val validationResult =
             printScriptClient.validateSnippet(
@@ -316,29 +325,6 @@ class SnippetService(
         return snippet.toUIFormatDto(formatResult.formattedCode)
     }
 
-//    /**
-//     * Gets all snippets owned by a specific user.
-//     *
-//     * @param userId The user ID to filter snippets by
-//     * @return List of snippets owned by the user
-//     */
-// This now gets snippets by querying auth service for user's accessible snippets
-
-//    fun getSnippetsByUser(userId: String): List<SnippetSummaryDto> {
-//        val userSnippets = snippetRepository.findByOwnerId(userId)
-//
-//        return userSnippets.map { snippet ->
-//            val lintStatus = logService.getLatestLintStatus(snippet.id)
-//            SnippetSummaryDto(
-//                id = snippet.id,
-//                name = snippet.name,
-//                language = snippet.language.name,
-//                version = snippet.version,
-//                createdAt = snippet.createdAt,
-//                compliance = lintStatus.status,
-//            )
-//        }
-//    }
 
     // List Descriptors
     fun listSnippetDescriptors(
@@ -346,34 +332,47 @@ class SnippetService(
         page: Int,
         pageSize: Int,
         name: String?,
+        snippetIds: List<UUID>,
+        language: String?,
     ): PaginatedSnippetsResponse {
-        val pageable = PageRequest.of(page, pageSize)
 
-        // TODO: Filter by user's snippets via auth-service if needed
-        val result =
-            snippetRepository.findByNameContainingIgnoreCase(
-                name ?: "",
-                pageable,
+        if (snippetIds.isEmpty()) {
+            return PaginatedSnippetsResponse(
+                page = page,
+                pageSize = pageSize,
+                count = 0,
+                snippets = emptyList(),
             )
+        }
 
-        val snippetDtos =
-            result.content.map {
-                SnippetResponse(
-                    id = it.id,
-                    name = it.name,
-                    description = it.description,
-                    language = it.language.name,
-                    version = it.version,
-                    createdAt = it.createdAt.toString(),
-                    author = userId,
-                    compliance = logService.getLatestLintStatus(it.id).status,
-                )
-            }
+        val pageable = PageRequest.of(page, pageSize)
+        val paginatedResult = snippetRepository.findFilteredSnippets (
+            snippetIds = snippetIds,
+            name = name.takeIf { !it.isNullOrBlank() },
+            language = language.takeIf { !it.isNullOrBlank() },
+            pageable = pageable,
+        )
+
+        val snippetDtos = paginatedResult.content.map { snippet ->
+
+            val ownerInfo = authClient.getSnippetOwner(snippet.id)
+
+            SnippetResponse(
+                id = snippet.id,
+                name = snippet.name,
+                description = snippet.description,
+                language = snippet.language.name,
+                version = snippet.version,
+                createdAt = snippet.createdAt.toString(),
+                author = ownerInfo?.ownerName ?: "Unknown",
+                compliance = logService.getLatestLintStatus(snippet.id).status
+            )
+        }
 
         return PaginatedSnippetsResponse(
             page = page,
             pageSize = pageSize,
-            count = result.totalElements,
+            count = paginatedResult.totalElements,
             snippets = snippetDtos,
         )
     }
