@@ -121,6 +121,7 @@ class TestService(
     // "Call" Printscript to execute snippet and check if test passed (output coincides)
     fun runTest(
         snippetId: UUID,
+        userId: String,
         request: RunTestRequest,
     ): TestResultResponse {
         val snippet =
@@ -142,6 +143,7 @@ class TestService(
         val executionResult =
             printScriptClient.executeSnippet(
                 code = finalCode,
+                userId = userId,
                 version = snippet.version,
             )
 
