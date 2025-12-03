@@ -23,18 +23,42 @@ class LintConfigService(
     fun getConfigJson(userId: String): String {
         val config = mergeWithPrintScriptRules(userId)
 
-        // Parse the stored config: {"rule-name": {"value": X, "isActive": Y}}
+        // Parse the stored config: {"rule-name": {"value": X, "isActive": Y, "type": "Boolean|Number"}}
         val configMap =
             objectMapper.readValue(config.config, Map::class.java)
-                as Map<String, Map<String, Any?>>
+                    as Map<String, Map<String, Any?>>
 
         // Transform to printscript format: {"rule-name": X} (only active rules)
         val simplifiedConfig =
             configMap
                 .filter { (_, ruleData) -> ruleData["isActive"] as? Boolean ?: true }
-                .mapValues { (_, ruleData) -> ruleData["value"] }
+                .mapValues { (_, ruleData) ->
+                    normalizeValue(ruleData["value"], ruleData["type"] as? String)
+                }
 
         return objectMapper.writeValueAsString(simplifiedConfig)
+    }
+
+    private fun normalizeValue(value: Any?, expectedType: String?): Any {
+        return when (expectedType) {
+            "Boolean" -> {
+                when (value) {
+                    "1", 1, "true", true -> true
+                    "0", 0, "false", false -> false
+                    else -> value ?: true
+                }
+            }
+            "Number" -> {
+                when (value) {
+                    is Number -> value
+                    is String -> value.toIntOrNull() ?: value.toDoubleOrNull() ?: 0
+                    true, "true", "1" -> 1
+                    false, "false", "0" -> 0
+                    else -> 0
+                }
+            }
+            else -> value ?: ""
+        }
     }
 
     fun updateConfig(
@@ -73,21 +97,29 @@ class LintConfigService(
         val baseConfigMap: MutableMap<String, Map<String, Any?>> =
             rules
                 .associate { rule ->
-                    val defaultValue =
-                        rule.data.firstOrNull()?.default ?: "true"
+                    val defaultValue = rule.data.firstOrNull()?.default ?: "true"
+                    val ruleType = rule.data.firstOrNull()?.type ?: "Boolean"
 
-                    val value: Any =
-                        when (rule.data.firstOrNull()?.type) {
-                            "Boolean" -> defaultValue.toBoolean()
-                            "Number" -> defaultValue.toIntOrNull() ?: defaultValue
-                            else -> defaultValue
+                    val value: Any = when (ruleType) {
+                        "Boolean" -> {
+                            when (defaultValue) {
+                                "1", "true" -> true
+                                "0", "false" -> false
+                                else -> defaultValue.toBoolean()
+                            }
                         }
+                        "Number" -> {
+                            defaultValue.toIntOrNull() ?: defaultValue.toDoubleOrNull() ?: 0
+                        }
+                        else -> defaultValue
+                    }
 
                     rule.name to
-                        mapOf(
-                            "value" to value,
-                            "isActive" to true,
-                        )
+                            mapOf(
+                                "value" to value,
+                                "isActive" to true,
+                                "type" to ruleType  // Store the type for later use
+                            )
                 }.toMutableMap()
 
         // Try to find existing user config
@@ -98,12 +130,19 @@ class LintConfigService(
             if (existingConfig != null) {
                 val userConfigMap =
                     objectMapper.readValue(existingConfig.config, Map::class.java)
-                        as Map<String, Map<String, Any?>>
+                            as Map<String, Map<String, Any?>>
 
                 // Override with user's custom values where they exist
                 userConfigMap.forEach { (ruleName, userData) ->
                     if (baseConfigMap.containsKey(ruleName)) {
-                        baseConfigMap[ruleName] = userData
+                        val expectedType = baseConfigMap[ruleName]?.get("type") as? String ?: "Boolean"
+                        val normalizedValue = normalizeValue(userData["value"], expectedType)
+
+                        baseConfigMap[ruleName] = mapOf(
+                            "value" to normalizedValue,
+                            "isActive" to (userData["isActive"] as? Boolean ?: true),
+                            "type" to expectedType
+                        )
                     }
                 }
 
@@ -131,13 +170,21 @@ class LintConfigService(
     }
 
     private fun buildConfigJson(request: List<RuleConfigRequest>): String {
+        // Fetch rules to get their types
+        val rules = printScriptClient.getLintConfigRules("1.1")
+        val ruleTypes = rules.associate { it.name to (it.data.firstOrNull()?.type ?: "Boolean") }
+
         val configMap =
             request.associate { rule ->
+                val expectedType = ruleTypes[rule.id] ?: "Boolean"
+                val normalizedValue = normalizeValue(rule.value, expectedType)
+
                 rule.id to
-                    mapOf(
-                        "value" to rule.value,
-                        "isActive" to rule.isActive,
-                    )
+                        mapOf(
+                            "value" to normalizedValue,
+                            "isActive" to rule.isActive,
+                            "type" to expectedType
+                        )
             }
 
         return objectMapper.writeValueAsString(configMap)
@@ -146,7 +193,7 @@ class LintConfigService(
     private fun parseConfigToResponse(config: LintConfig): List<RuleConfigResponse> {
         val configMap =
             objectMapper.readValue(config.config, Map::class.java)
-                as Map<String, Map<String, Any?>>
+                    as Map<String, Map<String, Any?>>
 
         return configMap.map { (key, ruleData) ->
             RuleConfigResponse(

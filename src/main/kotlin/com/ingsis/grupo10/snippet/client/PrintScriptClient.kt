@@ -32,18 +32,21 @@ class PrintScriptClient(
         tempConfigPath.writeText(configJson)
 
         try {
-            val response =
-                webClient
-                    .post()
-                    .uri("/api/printscript/verify?version=$version")
-                    .contentType(MediaType.MULTIPART_FORM_DATA)
-                    .body(
-                        BodyInserters
-                            .fromMultipartData("snippet", FileSystemResource(tempFilePath.toFile()))
-                            .with("config", FileSystemResource(tempConfigPath.toFile())),
-                    ).retrieve()
-                    .bodyToMono(LintResultDTO::class.java)
-                    .block() ?: throw RuntimeException("No response from PrintScript service")
+            val response = webClient
+                .post()
+                .uri("/api/printscript/verify?version=$version")
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(
+                    BodyInserters.fromMultipartData(
+                        org.springframework.util.LinkedMultiValueMap<String, Any>().apply {
+                            add("snippet", FileSystemResource(tempFilePath.toFile()))
+                            add("config", FileSystemResource(tempConfigPath.toFile()))
+                        }
+                    )
+                )
+                .retrieve()
+                .bodyToMono(LintResultDTO::class.java)
+                .block() ?: throw RuntimeException("No response from PrintScript service")
 
             return if (response.errors.isEmpty()) {
                 ValidationResult.Success
@@ -52,7 +55,7 @@ class PrintScriptClient(
                     response.errors.map {
                         ValidationError(
                             message = it.message,
-                            line = extractLineNumber(it.message), // Parsear del mensaje
+                            line = extractLineNumber(it.message),
                             column = extractColumnNumber(it.message),
                             rule = it.type,
                         )
@@ -64,6 +67,7 @@ class PrintScriptClient(
             tempConfigPath.deleteExisting()
         }
     }
+
 
     fun executeSnippet(
         code: String,
@@ -77,32 +81,32 @@ class PrintScriptClient(
         tempConfigPath.writeText(configJson)
 
         try {
-            val rawResponse =
-                webClient
-                    .post()
-                    .uri("/api/printscript/execute?version=$version")
-                    .contentType(MediaType.MULTIPART_FORM_DATA)
-                    .body(
-                        BodyInserters
-                            .fromMultipartData("snippet", FileSystemResource(tempFilePath.toFile()))
-                            .with("config", FileSystemResource(tempConfigPath.toFile())),
-                    ).retrieve()
-                    .bodyToMono(String::class.java)
-                    .block() ?: throw RuntimeException("No response from PrintScript service")
+            val rawResponse = webClient
+                .post()
+                .uri("/api/printscript/execute?version=$version")
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(
+                    BodyInserters.fromMultipartData(
+                        org.springframework.util.LinkedMultiValueMap<String, Any>().apply {
+                            add("snippet", FileSystemResource(tempFilePath.toFile()))
+                            add("config", FileSystemResource(tempConfigPath.toFile()))
+                        }
+                    )
+                )
+                .retrieve()
+                .bodyToMono(String::class.java)
+                .block() ?: throw RuntimeException("No response from PrintScript service")
 
-            // Si el servicio pone "Error: ..." en el body cuando falla:
             if (rawResponse.startsWith("Error:")) {
                 return ExecutionResult.Failed(
                     listOf(ExecutionError(message = rawResponse.removePrefix("Error:").trim())),
                 )
             }
 
-            // Separar por líneas -> lista de strings
-            val outputLines =
-                rawResponse
-                    .lines()
-                    .map { it.trimEnd() }
-                    .filter { it.isNotEmpty() } // opcional
+            val outputLines = rawResponse
+                .lines()
+                .map { it.trimEnd() }
+                .filter { it.isNotEmpty() }
 
             return ExecutionResult.Success(output = outputLines)
         } finally {
@@ -110,6 +114,7 @@ class PrintScriptClient(
             tempConfigPath.deleteExisting()
         }
     }
+
 
     private fun extractLineNumber(message: String): Int? {
         // Parse line number from error message
@@ -145,18 +150,21 @@ class PrintScriptClient(
         tempConfigPath.writeText(lintConfig)
 
         try {
-            val response =
-                webClient
-                    .post()
-                    .uri("/api/printscript/verify?version=$version")
-                    .contentType(MediaType.MULTIPART_FORM_DATA)
-                    .body(
-                        BodyInserters
-                            .fromMultipartData("snippet", FileSystemResource(tempFilePath.toFile()))
-                            .with("config", FileSystemResource(tempConfigPath.toFile())),
-                    ).retrieve()
-                    .bodyToMono(LintResultDTO::class.java)
-                    .block() ?: throw RuntimeException("No response from PrintScript service")
+            val response = webClient
+                .post()
+                .uri("/api/printscript/verify?version=$version")
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(
+                    BodyInserters.fromMultipartData(
+                        org.springframework.util.LinkedMultiValueMap<String, Any>().apply {
+                            add("snippet", FileSystemResource(tempFilePath.toFile()))
+                            add("config", FileSystemResource(tempConfigPath.toFile()))
+                        }
+                    )
+                )
+                .retrieve()
+                .bodyToMono(LintResultDTO::class.java)
+                .block() ?: throw RuntimeException("No response from PrintScript service")
 
             return response
         } finally {
@@ -177,18 +185,21 @@ class PrintScriptClient(
         tempConfigPath.writeText(formatConfig)
 
         try {
-            val formattedCode =
-                webClient
-                    .post()
-                    .uri("/api/printscript/format?version=$version")
-                    .contentType(MediaType.MULTIPART_FORM_DATA)
-                    .body(
-                        BodyInserters
-                            .fromMultipartData("snippet", FileSystemResource(tempFilePath.toFile()))
-                            .with("config", FileSystemResource(tempConfigPath.toFile())),
-                    ).retrieve()
-                    .bodyToMono(String::class.java)
-                    .block() ?: throw RuntimeException("No response from PrintScript service")
+            val formattedCode = webClient
+                .post()
+                .uri("/api/printscript/format?version=$version")
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(
+                    BodyInserters.fromMultipartData(
+                        org.springframework.util.LinkedMultiValueMap<String, Any>().apply {
+                            add("snippet", FileSystemResource(tempFilePath.toFile()))
+                            add("config", FileSystemResource(tempConfigPath.toFile()))
+                        }
+                    )
+                )
+                .retrieve()
+                .bodyToMono(String::class.java)
+                .block() ?: throw RuntimeException("No response from PrintScript service")
 
             return FormatResultDTO(formattedCode)
         } finally {
