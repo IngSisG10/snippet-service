@@ -11,8 +11,6 @@ import com.ingsis.grupo10.snippet.dto.SnippetUIDetailDto
 import com.ingsis.grupo10.snippet.dto.SnippetUIFormatDto
 import com.ingsis.grupo10.snippet.dto.SnippetUIUpdateRequest
 import com.ingsis.grupo10.snippet.dto.filetype.FileTypeResponse
-import com.ingsis.grupo10.snippet.dto.formatconfig.FormatConfigRequest
-import com.ingsis.grupo10.snippet.dto.lintconfig.LintConfigRequest
 import com.ingsis.grupo10.snippet.dto.paginatedsnippets.PaginatedSnippetsResponse
 import com.ingsis.grupo10.snippet.dto.paginatedsnippets.SnippetResponse
 import com.ingsis.grupo10.snippet.dto.tests.ExecutionDto
@@ -325,7 +323,6 @@ class SnippetService(
         return snippet.toUIFormatDto(formatResult.formattedCode)
     }
 
-
     // List Descriptors
     fun listSnippetDescriptors(
         userId: String,
@@ -335,7 +332,6 @@ class SnippetService(
         snippetIds: List<UUID>,
         language: String?,
     ): PaginatedSnippetsResponse {
-
         if (snippetIds.isEmpty()) {
             return PaginatedSnippetsResponse(
                 page = page,
@@ -346,28 +342,30 @@ class SnippetService(
         }
 
         val pageable = PageRequest.of(page, pageSize)
-        val paginatedResult = snippetRepository.findFilteredSnippets (
-            snippetIds = snippetIds,
-            name = name.takeIf { !it.isNullOrBlank() },
-            language = language.takeIf { !it.isNullOrBlank() },
-            pageable = pageable,
-        )
-
-        val snippetDtos = paginatedResult.content.map { snippet ->
-
-            val ownerInfo = authClient.getSnippetOwner(snippet.id)
-
-            SnippetResponse(
-                id = snippet.id,
-                name = snippet.name,
-                description = snippet.description,
-                language = snippet.language.name,
-                version = snippet.version,
-                createdAt = snippet.createdAt.toString(),
-                author = ownerInfo?.ownerName ?: "Unknown",
-                compliance = logService.getLatestLintStatus(snippet.id).status
+        val paginatedResult =
+            snippetRepository.findFilteredSnippets(
+                snippetIds = snippetIds,
+                name = name.takeIf { !it.isNullOrBlank() },
+                language = language.takeIf { !it.isNullOrBlank() },
+                pageable = pageable,
             )
-        }
+
+        val snippetDtos =
+            paginatedResult.content.map { snippet ->
+
+                val ownerInfo = authClient.getSnippetOwner(snippet.id)
+
+                SnippetResponse(
+                    id = snippet.id,
+                    name = snippet.name,
+                    description = snippet.description,
+                    language = snippet.language.name,
+                    version = snippet.version,
+                    createdAt = snippet.createdAt.toString(),
+                    author = ownerInfo?.ownerName ?: "Unknown",
+                    compliance = logService.getLatestLintStatus(snippet.id).status,
+                )
+            }
 
         return PaginatedSnippetsResponse(
             page = page,

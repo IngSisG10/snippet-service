@@ -9,8 +9,8 @@ import com.ingsis.grupo10.snippet.dto.validation.ValidationError
 import com.ingsis.grupo10.snippet.dto.validation.ValidationResult
 import org.springframework.core.io.FileSystemResource
 import org.springframework.http.MediaType
+import org.springframework.http.client.MultipartBodyBuilder
 import org.springframework.stereotype.Service
-import org.springframework.web.reactive.function.BodyInserters
 import org.springframework.web.reactive.function.client.WebClient
 import kotlin.io.path.createTempFile
 import kotlin.io.path.deleteExisting
@@ -28,20 +28,21 @@ class PrintScriptClient(
         val tempFilePath = createTempFile(prefix = "snippet", suffix = ".ps")
         tempFilePath.writeText(code)
 
-        val tempConfigPath = createTempFile(prefix = "lint-config", suffix = ".json")
+        val tempConfigPath = createTempFile(prefix = "config", suffix = ".json")
         tempConfigPath.writeText(configJson)
 
         try {
+            val builder = MultipartBodyBuilder()
+            builder.part("snippet", FileSystemResource(tempFilePath.toFile()))
+            builder.part("config", FileSystemResource(tempConfigPath.toFile()))
+
             val response =
                 webClient
                     .post()
                     .uri("/api/printscript/verify?version=$version")
                     .contentType(MediaType.MULTIPART_FORM_DATA)
-                    .body(
-                        BodyInserters
-                            .fromMultipartData("snippet", FileSystemResource(tempFilePath.toFile()))
-                            .with("config", FileSystemResource(tempConfigPath.toFile())),
-                    ).retrieve()
+                    .bodyValue(builder.build())
+                    .retrieve()
                     .bodyToMono(LintResultDTO::class.java)
                     .block() ?: throw RuntimeException("No response from PrintScript service")
 
@@ -73,20 +74,21 @@ class PrintScriptClient(
         val tempFilePath = createTempFile(prefix = "snippet", suffix = ".ps")
         tempFilePath.writeText(code)
 
-        val tempConfigPath = createTempFile(prefix = "lint-config", suffix = ".json")
+        val tempConfigPath = createTempFile(prefix = "config", suffix = ".json")
         tempConfigPath.writeText(configJson)
 
         try {
+            val builder = MultipartBodyBuilder()
+            builder.part("snippet", FileSystemResource(tempFilePath.toFile()))
+            builder.part("config", FileSystemResource(tempConfigPath.toFile()))
+
             val rawResponse =
                 webClient
                     .post()
                     .uri("/api/printscript/execute?version=$version")
                     .contentType(MediaType.MULTIPART_FORM_DATA)
-                    .body(
-                        BodyInserters
-                            .fromMultipartData("snippet", FileSystemResource(tempFilePath.toFile()))
-                            .with("config", FileSystemResource(tempConfigPath.toFile())),
-                    ).retrieve()
+                    .bodyValue(builder.build())
+                    .retrieve()
                     .bodyToMono(String::class.java)
                     .block() ?: throw RuntimeException("No response from PrintScript service")
 
@@ -141,20 +143,21 @@ class PrintScriptClient(
         val tempFilePath = createTempFile(prefix = "snippet", suffix = ".ps")
         tempFilePath.writeText(code)
 
-        val tempConfigPath = createTempFile(prefix = "lint-config", suffix = ".json")
+        val tempConfigPath = createTempFile(prefix = "config", suffix = ".json")
         tempConfigPath.writeText(lintConfig)
 
         try {
+            val builder = MultipartBodyBuilder()
+            builder.part("snippet", FileSystemResource(tempFilePath.toFile()))
+            builder.part("config", FileSystemResource(tempConfigPath.toFile()))
+
             val response =
                 webClient
                     .post()
                     .uri("/api/printscript/verify?version=$version")
                     .contentType(MediaType.MULTIPART_FORM_DATA)
-                    .body(
-                        BodyInserters
-                            .fromMultipartData("snippet", FileSystemResource(tempFilePath.toFile()))
-                            .with("config", FileSystemResource(tempConfigPath.toFile())),
-                    ).retrieve()
+                    .bodyValue(builder.build())
+                    .retrieve()
                     .bodyToMono(LintResultDTO::class.java)
                     .block() ?: throw RuntimeException("No response from PrintScript service")
 
@@ -173,20 +176,21 @@ class PrintScriptClient(
         val tempFilePath = createTempFile(prefix = "snippet", suffix = ".ps")
         tempFilePath.writeText(code)
 
-        val tempConfigPath = createTempFile(prefix = "format-config", suffix = ".json")
+        val tempConfigPath = createTempFile(prefix = "config", suffix = ".json")
         tempConfigPath.writeText(formatConfig)
 
         try {
+            val builder = MultipartBodyBuilder()
+            builder.part("snippet", FileSystemResource(tempFilePath.toFile()))
+            builder.part("config", FileSystemResource(tempConfigPath.toFile()))
+
             val formattedCode =
                 webClient
                     .post()
                     .uri("/api/printscript/format?version=$version")
                     .contentType(MediaType.MULTIPART_FORM_DATA)
-                    .body(
-                        BodyInserters
-                            .fromMultipartData("snippet", FileSystemResource(tempFilePath.toFile()))
-                            .with("config", FileSystemResource(tempConfigPath.toFile())),
-                    ).retrieve()
+                    .bodyValue(builder.build())
+                    .retrieve()
                     .bodyToMono(String::class.java)
                     .block() ?: throw RuntimeException("No response from PrintScript service")
 
