@@ -43,7 +43,7 @@ class SnippetService(
     private val authClient: AuthClient,
     private val logService: LogService,
     private val lintConfigService: LintConfigService,
-    private val formatConfigService: FormatConfigService,
+//    private val formatConfigService: FormatConfigService,
     private val testExecutionProducer: com.ingsis.grupo10.snippet.producer.TestExecutionProducer,
 ) {
     fun getSnippetById(id: UUID): SnippetDetailDto {
@@ -75,15 +75,12 @@ class SnippetService(
 
     fun createSnippet(
         request: SnippetUICreateRequest,
-        userId: String,
         snippetId: UUID,
     ): Created {
-        val configJson = lintConfigService.getConfigJson(userId)
 
         val validationResult =
             printScriptClient.validateSnippet(
                 code = request.content,
-                configJson = configJson,
                 version = "1.1",
             )
 
@@ -212,10 +209,8 @@ class SnippetService(
 
     fun updateSnippet(
         id: UUID,
-        userId: String,
         request: SnippetUIUpdateRequest,
     ): SnippetDetailDto {
-        val configJson = lintConfigService.getConfigJson(userId)
 
         val existingSnippet =
             snippetRepository
@@ -225,7 +220,6 @@ class SnippetService(
         val validationResult =
             printScriptClient.validateSnippet(
                 code = request.content,
-                configJson = configJson,
                 version = "1.1",
             )
 
@@ -263,7 +257,7 @@ class SnippetService(
                 logService.logValidation(saved, emptyList())
 
                 // Trigger test execution for all tests of this snippet
-                testExecutionProducer.publishTestExecutionRequest(userId, saved.id.toString())
+                testExecutionProducer.publishTestExecutionRequest(saved.id.toString())
 
                 return saved.toDetailDto()
             }
@@ -304,25 +298,27 @@ class SnippetService(
 
         // TODO: Get user-specific format config - for now use default
         // val formatConfig = """{"enforce-spacing-around-equals": true}"""
-        val formatConfig = formatConfigService.getConfigJson(userId)
+//        val formatConfig = formatConfigService.getConfigJson(userId)
 
         val (container, key) = parseCodeUrl(snippet.codeUrl)
 
         val code = assetClient.getAsset(container, key)
 
-        val formatResult =
-            printScriptClient.formatSnippet(
-                code = code,
-                version = snippet.version,
-                formatConfig = formatConfig,
-            )
+//        val formatResult =
+//            printScriptClient.formatSnippet(
+//                code = code,
+//                version = snippet.version,
+//                formatConfig = formatConfig,
+//            )
 
         // Update the asset with formatted code
-        assetClient.createAsset(container, key, formatResult.formattedCode)
+//        assetClient.createAsset(container, key, formatResult.formattedCode)
+//
+//        logService.logFormatting(snippet, formatResult.formattedCode, formatConfig)
+//
+//        return snippet.toUIFormatDto(formatResult.formattedCode)
+        return snippet.toUIFormatDto(code)
 
-        logService.logFormatting(snippet, formatResult.formattedCode, formatConfig)
-
-        return snippet.toUIFormatDto(formatResult.formattedCode)
     }
 
 
@@ -410,13 +406,9 @@ class SnippetService(
         return snippet.toUIDetailDto(content, username)
     }
 
-    fun runSnippet(
-        userId: String,
-        snippetId: UUID,
-    ): ExecutionDto {
+    fun runSnippet(snippetId: UUID): ExecutionDto {
         val snippet = snippetRepository.findById(snippetId).orElseThrow { IllegalArgumentException("Snippet not found") }
 
-        val configJson = lintConfigService.getConfigJson(userId)
 
         val (container, key) = parseCodeUrl(snippet.codeUrl)
 
@@ -425,7 +417,7 @@ class SnippetService(
         val executionResult =
             printScriptClient.executeSnippet(
                 code = code,
-                configJson = configJson,
+                input = emptyList(),
                 version = snippet.version,
             )
 

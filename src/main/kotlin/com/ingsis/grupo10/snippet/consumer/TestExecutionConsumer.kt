@@ -40,9 +40,8 @@ class TestExecutionConsumer
 
             try {
                 val snippetId = UUID.fromString(request.snippetId)
-                val userId = request.userId
 
-                val results = testService.runAllTestsForSnippet(userId, snippetId)
+                val results = testService.runAllTestsForSnippet(snippetId)
 
                 println("Test execution completed for snippet: ${request.snippetId}")
                 println("Results: ${results.size} tests executed")

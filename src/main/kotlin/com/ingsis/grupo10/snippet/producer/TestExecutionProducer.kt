@@ -8,10 +8,7 @@ import org.springframework.data.redis.core.RedisTemplate
 import org.springframework.stereotype.Component
 
 interface TestExecutionProducer {
-    fun publishTestExecutionRequest(
-        userId: String,
-        snippetId: String,
-    )
+    fun publishTestExecutionRequest(snippetId: String)
 }
 
 @Component
@@ -21,13 +18,10 @@ class RedisTestExecutionProducer
         @Value("\${stream.test.key}") streamKey: String,
         redis: RedisTemplate<String, String>,
     ) : RedisStreamProducer(streamKey, redis),
-        TestExecutionProducer {
-        override fun publishTestExecutionRequest(
-            userId: String,
-            snippetId: String,
-        ) {
-            println("Publishing test execution request for snippet: $snippetId")
-            val request = TestExecutionRequest(userId, snippetId)
-            emit(request)
-        }
+    TestExecutionProducer {
+    override fun publishTestExecutionRequest(snippetId: String) {
+        println("Publishing test execution request for snippet: $snippetId")
+        val request = TestExecutionRequest(snippetId)
+        emit(request)
     }
+}

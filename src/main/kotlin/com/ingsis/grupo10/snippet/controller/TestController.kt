@@ -100,10 +100,8 @@ class TestController(
     fun runTest(
         @PathVariable snippetId: UUID,
         @RequestBody request: RunTestRequest,
-        @AuthenticationPrincipal jwt: Jwt,
     ): ResponseEntity<TestResultResponse> {
-        val userId = jwt.subject
-        val result = testService.runTest(snippetId, userId, request)
+        val result = testService.runTest(snippetId, request)
         return ResponseEntity.ok(result)
     }
 }

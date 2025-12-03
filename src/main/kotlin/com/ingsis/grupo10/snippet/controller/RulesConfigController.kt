@@ -17,14 +17,14 @@ import org.springframework.web.bind.annotation.RestController
 class RulesConfigController(
     private val ruleConfigService: RuleConfigService,
 ) {
-    @GetMapping("/format")
-    fun getFormattingRules(
-        @AuthenticationPrincipal jwt: Jwt,
-    ): ResponseEntity<List<RuleConfigResponse>> {
-        val userId = jwt.subject
-        val rules = ruleConfigService.getFormattingRules(userId)
-        return ResponseEntity.ok(rules)
-    }
+//    @GetMapping("/format")
+//    fun getFormattingRules(
+//        @AuthenticationPrincipal jwt: Jwt,
+//    ): ResponseEntity<List<RuleConfigResponse>> {
+//        val userId = jwt.subject
+////        val rules = ruleConfigService.getFormattingRules(userId)
+//        return ResponseEntity.ok()
+//    }
 
     @GetMapping("/lint")
     fun getLintingRules(
@@ -35,20 +35,21 @@ class RulesConfigController(
         return ResponseEntity.ok(rules)
     }
 
-    @PutMapping("/format")
-    fun updateFormattingRules(
-        @RequestBody rules: List<RuleConfigRequest>,
-        @AuthenticationPrincipal jwt: Jwt,
-    ): ResponseEntity<List<RuleConfigResponse>> {
-        val userId = jwt.subject
-
-        // Update the formatting rules
-        val updatedRules = ruleConfigService.updateFormattingRules(rules, userId)
-
-        ruleConfigService.generateFormatEvents(userId)
-
-        return ResponseEntity.ok(updatedRules)
-    }
+//    @PutMapping("/format")
+//    fun updateFormattingRules(
+//        @RequestBody rules: List<RuleConfigRequest>,
+//        @AuthenticationPrincipal jwt: Jwt,
+//    ): ResponseEntity<List<RuleConfigResponse>> {
+//        val userId = jwt.subject
+//
+//        // Update the formatting rules
+////        val updatedRules = ruleConfigService.updateFormattingRules(rules, userId)
+//
+//        ruleConfigService.generateFormatEvents(userId)
+//
+//
+//        return ResponseEntity.ok()
+//    }
 
     @PutMapping("/lint")
     fun updateLintingRules(

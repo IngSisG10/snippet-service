@@ -134,7 +134,7 @@ class SnippetController(
         // Create snippet
         val created =
             try {
-                snippetService.createSnippet(request, userId, snippetId)
+                snippetService.createSnippet(request, snippetId)
             } catch (ex: Exception) {
                 // ROLLBACK: Unregister snippet if creation fails
                 authClient.unregisterSnippet(snippetId, userId)
@@ -178,7 +178,7 @@ class SnippetController(
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
         }
 
-        val updated = snippetService.updateSnippet(id, userId, request)
+        val updated = snippetService.updateSnippet(id, request)
 
         // todo: Test automaticos
         // snippetService.generateTestEvents(id)
@@ -326,11 +326,9 @@ class SnippetController(
 
     @PostMapping("/run/{id}")
     fun runSnippet(
-        @AuthenticationPrincipal jwt: Jwt,
         @PathVariable id: UUID,
     ): ResponseEntity<ExecutionDto> {
-        val userId = jwt.subject
-        val response = snippetService.runSnippet(userId, id)
+        val response = snippetService.runSnippet(id)
         return ResponseEntity.ok(response)
     }
 }
