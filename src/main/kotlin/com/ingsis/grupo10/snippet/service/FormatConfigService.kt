@@ -80,6 +80,7 @@ class FormatConfigService(
                         when (rule.data.firstOrNull()?.type) {
                             "Boolean" -> defaultValue.toBoolean()
                             "Number" -> defaultValue.toIntOrNull() ?: defaultValue
+                            "Integer" -> defaultValue.toIntOrNull() ?: defaultValue
                             else -> defaultValue
                         }
 
