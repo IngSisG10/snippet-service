@@ -23,9 +23,20 @@ class PrintScriptClient(
     fun validateSnippet(
         code: String,
         version: String,
+        config: String,
     ): ValidationResult {
+        println("++++++++++++++++++++++++++++++")
+        println(config)
+        println("++++++++++++++++++++++++++++++")
         val tempFilePath = createTempFile(prefix = "snippet", suffix = ".ps")
         tempFilePath.writeText(code)
+
+        val tempConfigPath = createTempFile(prefix = "lint-config", suffix = ".json")
+        tempConfigPath.writeText(config)
+
+        println("++++++++++++++++++++++++++++++")
+        println(tempConfigPath)
+        println("++++++++++++++++++++++++++++++")
 
         try {
             val response =
@@ -36,7 +47,7 @@ class PrintScriptClient(
                     .body(
                         BodyInserters
                             .fromMultipartData("snippet", FileSystemResource(tempFilePath.toFile()))
-                            .with("config", createDefaultLintConfig()), // JSON con reglas
+                            .with("config", FileSystemResource(tempConfigPath.toFile())), // JSON con reglas
                     ).retrieve()
                     .bodyToMono(LintResultDTO::class.java)
                     .block() ?: throw RuntimeException("No response from PrintScript service")
@@ -179,6 +190,10 @@ class PrintScriptClient(
 
         val tempConfigPath = createTempFile(prefix = "format-config", suffix = ".json")
         tempConfigPath.writeText(formatConfig)
+
+        println("++++++++++++++++++++++++++++++")
+        println(formatConfig)
+        println("++++++++++++++++++++++++++++++")
 
         try {
             val formattedCode =

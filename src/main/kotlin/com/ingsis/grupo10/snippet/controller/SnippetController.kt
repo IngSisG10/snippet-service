@@ -136,7 +136,7 @@ class SnippetController(
         // Create snippet
         val created =
             try {
-                snippetService.createSnippet(request, snippetId)
+                snippetService.createSnippet(request, snippetId, userId)
             } catch (ex: Exception) {
                 // ROLLBACK: Unregister snippet if creation fails
                 authClient.unregisterSnippet(snippetId, userId)
@@ -180,7 +180,7 @@ class SnippetController(
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
         }
 
-        val updated = snippetService.updateSnippet(id, request)
+        val updated = snippetService.updateSnippet(id, request, userId)
 
         // todo: Test automaticos
         // snippetService.generateTestEvents(id)

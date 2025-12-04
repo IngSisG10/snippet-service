@@ -41,7 +41,7 @@ class SnippetService(
     private val authClient: AuthClient,
     private val logService: LogService,
     private val lintConfigService: LintConfigService,
-//    private val formatConfigService: FormatConfigService,
+    private val formatConfigService: FormatConfigService,
     private val testExecutionProducer: com.ingsis.grupo10.snippet.producer.TestExecutionProducer,
 ) {
     fun getSnippetById(id: UUID): SnippetDetailDto {
@@ -74,11 +74,15 @@ class SnippetService(
     fun createSnippet(
         request: SnippetUICreateRequest,
         snippetId: UUID,
+        userId: String,
     ): Created {
+        val lintConfig = lintConfigService.getConfigJson(userId)
+
         val validationResult =
             printScriptClient.validateSnippet(
                 code = request.content,
                 version = "1.1",
+                config = lintConfig,
             )
 
         when (validationResult) {
@@ -207,16 +211,20 @@ class SnippetService(
     fun updateSnippet(
         id: UUID,
         request: SnippetUIUpdateRequest,
+        userId: String,
     ): SnippetDetailDto {
         val existingSnippet =
             snippetRepository
                 .findById(id)
                 .orElseThrow { IllegalArgumentException("Snippet not found") }
 
+        val lintConfig = lintConfigService.getConfigJson(userId)
+
         val validationResult =
             printScriptClient.validateSnippet(
                 code = request.content,
                 version = "1.1",
+                config = lintConfig,
             )
 
         when (validationResult) {
@@ -293,27 +301,25 @@ class SnippetService(
         val snippet = snippetRepository.findById(id).orElseThrow { IllegalArgumentException("Snippet not found") }
 
         // TODO: Get user-specific format config - for now use default
-        // val formatConfig = """{"enforce-spacing-around-equals": true}"""
-//        val formatConfig = formatConfigService.getConfigJson(userId)
+        val formatConfig = formatConfigService.getConfigJson(userId)
 
         val (container, key) = parseCodeUrl(snippet.codeUrl)
 
         val code = assetClient.getAsset(container, key)
 
-//        val formatResult =
-//            printScriptClient.formatSnippet(
-//                code = code,
-//                version = snippet.version,
-//                formatConfig = formatConfig,
-//            )
+        val formatResult =
+            printScriptClient.formatSnippet(
+                code = code,
+                version = snippet.version,
+                formatConfig = formatConfig,
+            )
 
         // Update the asset with formatted code
-//        assetClient.createAsset(container, key, formatResult.formattedCode)
-//
-//        logService.logFormatting(snippet, formatResult.formattedCode, formatConfig)
-//
-//        return snippet.toUIFormatDto(formatResult.formattedCode)
-        return snippet.toUIFormatDto(code)
+        assetClient.createAsset(container, key, formatResult.formattedCode)
+
+        logService.logFormatting(snippet, formatResult.formattedCode, formatConfig)
+
+        return snippet.toUIFormatDto(formatResult.formattedCode)
     }
 
     // List Descriptors

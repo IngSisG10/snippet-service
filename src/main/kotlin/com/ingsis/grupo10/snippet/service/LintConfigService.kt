@@ -72,6 +72,7 @@ class LintConfigService(
     private fun createDefaultConfig(userId: String): LintConfig {
         val rules = printScriptClient.getLintConfigRules("1.1")
 
+        // Create a base config map with all rules from PrintScript with default values
         val configMap: MutableMap<String, Map<String, Any?>> =
             rules
                 .associate { rule ->
