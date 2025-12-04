@@ -27,7 +27,6 @@ class PrintScriptClient(
         val tempFilePath = createTempFile(prefix = "snippet", suffix = ".ps")
         tempFilePath.writeText(code)
 
-
         try {
             val response =
                 webClient
@@ -158,7 +157,7 @@ class PrintScriptClient(
                         BodyInserters
                             .fromMultipartData("snippet", FileSystemResource(tempFilePath.toFile()))
                             .with("config", FileSystemResource(tempConfigPath.toFile())), // todo: JSON con reglas
-            // - deberia ser nuestro getLintConfigRules()
+                        // - deberia ser nuestro getLintConfigRules()
                     ).retrieve()
                     .bodyToMono(LintResultDTO::class.java)
                     .block() ?: throw RuntimeException("No response from PrintScript service")
@@ -216,20 +215,17 @@ class PrintScriptClient(
             throw RuntimeException("Error fetching formatting rules from PrintScript service: ${ex.message}", ex)
         }
 
-    fun getLintConfigRules() {
-        TODO()
-    }
-//    fun getLintConfigRules(version: String): List<RuleDto> =
-//        try {
-//            webClient
-//                .get()
-//                .uri("/api/printscript/lint/$version")
-//                .retrieve()
-//                .bodyToFlux(RuleDto::class.java)
-//                .collectList()
-//                .block()
-//                ?: emptyList()
-//        } catch (ex: Exception) {
-//            throw RuntimeException("Error fetching linting rules from PrintScript service: ${ex.message}", ex)
-//        }
+    fun getLintConfigRules(version: String): List<RuleDto> =
+        try {
+            webClient
+                .get()
+                .uri("/api/printscript/lint/$version")
+                .retrieve()
+                .bodyToFlux(RuleDto::class.java)
+                .collectList()
+                .block()
+                ?: emptyList()
+        } catch (ex: Exception) {
+            throw RuntimeException("Error fetching linting rules from PrintScript service: ${ex.message}", ex)
+        }
 }

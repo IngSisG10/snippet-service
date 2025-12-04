@@ -18,10 +18,10 @@ class RedisTestExecutionProducer
         @Value("\${stream.test.key}") streamKey: String,
         redis: RedisTemplate<String, String>,
     ) : RedisStreamProducer(streamKey, redis),
-    TestExecutionProducer {
-    override fun publishTestExecutionRequest(snippetId: String) {
-        println("Publishing test execution request for snippet: $snippetId")
-        val request = TestExecutionRequest(snippetId)
-        emit(request)
+        TestExecutionProducer {
+        override fun publishTestExecutionRequest(snippetId: String) {
+            println("Publishing test execution request for snippet: $snippetId")
+            val request = TestExecutionRequest(snippetId)
+            emit(request)
+        }
     }
-}

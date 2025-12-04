@@ -10,7 +10,7 @@ import java.util.UUID
 
 @Service
 class RuleConfigService(
-//    private val formatConfigService: FormatConfigService,
+    private val formatConfigService: FormatConfigService,
     private val lintConfigService: LintConfigService,
     private val authClient: AuthClient,
     private val formatRequestProducer: FormatRequestProducer,
@@ -48,14 +48,14 @@ class RuleConfigService(
         }
     }
 
-//    fun getFormattingRules(userId: String): List<RuleConfigResponse> = formatConfigService.getConfig(userId)
+    fun getFormattingRules(userId: String): List<RuleConfigResponse> = formatConfigService.getConfig(userId)
 
     fun getLintingRules(userId: String): List<RuleConfigResponse> = lintConfigService.getConfig(userId)
 
-//    fun updateFormattingRules(
-//        rules: List<RuleConfigRequest>,
-//        userId: String,
-//    ): List<RuleConfigResponse> = formatConfigService.updateConfig(userId, rules)
+    fun updateFormattingRules(
+        rules: List<RuleConfigRequest>,
+        userId: String,
+    ): List<RuleConfigResponse> = formatConfigService.updateConfig(userId, rules)
 
     fun updateLintingRules(
         rules: List<RuleConfigRequest>,

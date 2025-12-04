@@ -37,7 +37,7 @@ class SnippetController(
     private val authClient: AuthClient,
     private val lintRequestProducer: LintRequestProducer,
     private val formatRequestProducer: FormatRequestProducer,
-    private val logService : LogService,
+    private val logService: LogService,
 ) {
     @GetMapping("/descriptors")
     fun listSnippetDescriptors(
@@ -52,24 +52,26 @@ class SnippetController(
         val username = jwt.getClaimAsString("https://your-app.com/name")
         val userId = jwt.subject
 
-        var snippetIds = when (status) {
-            "owner" -> authClient.getUserOwnedSnippets(userId)
-            "read" -> authClient.getUserReadSnippets(userId)
-            else -> authClient.getUserAccessibleSnippets(userId) // "all"
-        }
+        var snippetIds =
+            when (status) {
+                "owner" -> authClient.getUserOwnedSnippets(userId)
+                "read" -> authClient.getUserReadSnippets(userId)
+                else -> authClient.getUserAccessibleSnippets(userId) // "all"
+            }
 
         if (compliance != null && compliance != "all") {
             snippetIds = logService.getSnippetIdsByCompliance(snippetIds, compliance)
         }
 
-        val result = snippetService.listSnippetDescriptors(
-            userId = username,
-            page = page,
-            pageSize = pageSize,
-            name = name,
-            snippetIds = snippetIds,
-            language = language,
-        )
+        val result =
+            snippetService.listSnippetDescriptors(
+                userId = username,
+                page = page,
+                pageSize = pageSize,
+                name = name,
+                snippetIds = snippetIds,
+                language = language,
+            )
 
         return ResponseEntity.ok(result)
     }

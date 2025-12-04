@@ -1,6 +1,7 @@
 package com.ingsis.grupo10.snippet.service
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.ingsis.grupo10.snippet.client.PrintScriptClient
 import com.ingsis.grupo10.snippet.dto.rules.RuleConfigRequest
 import com.ingsis.grupo10.snippet.dto.rules.RuleConfigResponse
 import com.ingsis.grupo10.snippet.models.LintConfig
@@ -12,6 +13,7 @@ import java.util.UUID
 class LintConfigService(
     private val lintConfigRepository: LintConfigRepository,
     private val objectMapper: ObjectMapper,
+    private val printScriptClient: PrintScriptClient,
 ) {
     fun getConfig(userId: String): List<RuleConfigResponse> {
         val config =
@@ -68,17 +70,29 @@ class LintConfigService(
     }
 
     private fun createDefaultConfig(userId: String): LintConfig {
-        val defaultConfig =
-            mapOf(
-                "identifier_format" to
+        val rules = printScriptClient.getLintConfigRules("1.1")
+
+        val configMap: MutableMap<String, Map<String, Any?>> =
+            rules
+                .associate { rule ->
+                    val defaultValue =
+                        rule.data.firstOrNull()?.default ?: "true"
+
+                    val value: Any =
+                        when (rule.data.firstOrNull()?.type) {
+                            "Boolean" -> defaultValue.toBoolean()
+                            "Number" -> defaultValue.toIntOrNull() ?: defaultValue
+                            else -> defaultValue
+                        }
+
+                    rule.name to
                         mapOf(
-                            "value" to "camel case",
+                            "value" to value,
                             "isActive" to true,
-                        ),
-            )
+                        )
+                }.toMutableMap()
 
-        val json = objectMapper.writeValueAsString(defaultConfig)
-
+        val json = objectMapper.writeValueAsString(configMap)
 
         return lintConfigRepository.save(
             LintConfig(
@@ -88,7 +102,6 @@ class LintConfigService(
             ),
         )
     }
-
 
     private fun buildConfigJson(request: List<RuleConfigRequest>): String {
         val configMap =

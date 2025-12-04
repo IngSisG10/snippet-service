@@ -296,7 +296,10 @@ class LogService(
         return errors
     }
 
-    fun getSnippetIdsByCompliance(snippetIds: List<UUID>, compliance: String): List<UUID> {
+    fun getSnippetIdsByCompliance(
+        snippetIds: List<UUID>,
+        compliance: String,
+    ): List<UUID> {
         if (compliance == "all") {
             return snippetIds
         }

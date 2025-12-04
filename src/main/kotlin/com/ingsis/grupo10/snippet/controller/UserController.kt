@@ -39,30 +39,35 @@ class UserController(
 
     @PostMapping("/register-or-login")
     fun registerOrLogin(
-        @AuthenticationPrincipal jwt: Jwt
+        @AuthenticationPrincipal jwt: Jwt,
     ): ResponseEntity<Map<String, Any>> {
         val userId = jwt.subject
-        val email = jwt.getClaimAsString("email")
-            ?: jwt.getClaimAsString("https://your-app.com/email")
-        val name = jwt.getClaimAsString("name")
-            ?: jwt.getClaimAsString("https://your-app.com/name")
+        val email =
+            jwt.getClaimAsString("email")
+                ?: jwt.getClaimAsString("https://your-app.com/email")
+        val name =
+            jwt.getClaimAsString("name")
+                ?: jwt.getClaimAsString("https://your-app.com/name")
 
         val success = authClient.registerOrLoginUser(userId, email, name)
 
         return if (success) {
-            ResponseEntity.ok(mapOf(
-                "success" to true,
-                "message" to "User registered/logged in successfully",
-                "userId" to userId
-            ))
+            ResponseEntity.ok(
+                mapOf(
+                    "success" to true,
+                    "message" to "User registered/logged in successfully",
+                    "userId" to userId,
+                ),
+            )
         } else {
             ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(mapOf(
-                    "success" to false,
-                    "message" to "Failed to register user"
-                ))
+                .body(
+                    mapOf(
+                        "success" to false,
+                        "message" to "Failed to register user",
+                    ),
+                )
         }
     }
-
 }

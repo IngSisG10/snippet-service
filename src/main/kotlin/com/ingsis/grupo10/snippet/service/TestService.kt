@@ -129,12 +129,9 @@ class TestService(
                 .findById(snippetId)
                 .orElseThrow { IllegalArgumentException("Snippet not found") }
 
-
         val (container, key) = parseCodeUrl(snippet.codeUrl)
 
         val code = assetClient.getAsset(container, key)
-
-
 
         val executionResult =
             printScriptClient.executeSnippet(
@@ -142,7 +139,6 @@ class TestService(
                 input = request.input ?: emptyList(),
                 version = snippet.version,
             )
-
 
         when (executionResult) {
             is ExecutionResult.Failed -> {
