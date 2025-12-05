@@ -24,12 +24,6 @@ class TestService(
     private val assetClient: AssetClient,
     private val lintConfigService: LintConfigService,
 ) {
-    // todo: para poder ejecutar el test, debemos pegarle al execute del printscript
-    // todo: para ello, necesitamos utilizar el PrintScriptClient y usar el endpoint de ejecucion
-
-    // todo: Es probable que tengamos que matchear los outputs esperados (ui)
-    //  con los outputs reales (la ejecucion desde printscript)
-
     fun getTestsBySnippet(snippetId: UUID): List<TestResponseDto> {
         if (!snippetRepository.existsById(snippetId)) {
             throw IllegalArgumentException("Snippet not found")
@@ -180,7 +174,7 @@ class TestService(
         if (inputs.isEmpty()) return code
 
         var inputIndex = 0
-        val pattern = Regex("readInput\\(\\)")
+        val pattern = Regex("readInput\\s*\\(\\s*\\)")
 
         val result =
             code.replace(pattern) { match ->
@@ -196,7 +190,7 @@ class TestService(
                     rawValue.toIntOrNull() != null -> rawValue
                     rawValue.toDoubleOrNull() != null -> rawValue
                     rawValue == "true" || rawValue == "false" -> rawValue
-                    else -> "\"" + rawValue.replace("\"", "\\\"") + "\""
+                    else -> "\"${rawValue.replace("\"", "\\\"")}\""
                 }
             }
 
@@ -234,9 +228,16 @@ class TestService(
 
         return tests.mapNotNull { test ->
             try {
+                val finalCode =
+                    if (test.input.isNotEmpty()) {
+                        replaceReadInputsSimple(code, test.input)
+                    } else {
+                        code
+                    }
+
                 val executionResult =
                     printScriptClient.executeSnippet(
-                        code = code,
+                        code = finalCode,
                         configJson = configJson,
                         version = snippet.version,
                     )

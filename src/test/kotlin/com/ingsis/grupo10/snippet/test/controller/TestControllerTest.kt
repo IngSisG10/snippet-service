@@ -1,6 +1,7 @@
 package com.ingsis.grupo10.snippet.test.controller
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.ingsis.grupo10.snippet.client.AuthClient
 import com.ingsis.grupo10.snippet.dto.TestCreateRequest
 import com.ingsis.grupo10.snippet.dto.TestResponseDto
 import com.ingsis.grupo10.snippet.service.TestService
@@ -21,9 +22,10 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.util.UUID
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt as jwtPostProcessor
 
 @SpringBootTest
-@AutoConfigureMockMvc(addFilters = false)
+@AutoConfigureMockMvc
 class TestControllerTest {
     @Autowired
     private lateinit var mockMvc: MockMvc
@@ -34,8 +36,12 @@ class TestControllerTest {
     @MockitoBean
     private lateinit var testService: TestService
 
+    @MockitoBean
+    private lateinit var authClient: AuthClient
+
     private val snippetId = UUID.randomUUID()
     private val testId = UUID.randomUUID()
+    private val userId = "test-user-123"
 
     @Test
     fun `should create test`() {
@@ -54,13 +60,22 @@ class TestControllerTest {
                 output = listOf("5"),
             )
 
+        `when`(authClient.checkPermission(any(), any(), any()))
+            .thenReturn(true)
+
         `when`(testService.createTest(any(), any()))
             .thenReturn(response)
 
         mockMvc
             .perform(
                 post("/tests/$snippetId")
-                    .contentType(MediaType.APPLICATION_JSON)
+                    .with(
+                        jwtPostProcessor()
+                            .jwt { jwt ->
+                                jwt.subject(userId)
+                                jwt.claim("sub", userId)
+                            },
+                    ).contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(request)),
             ).andExpect(status().isOk)
             .andExpect(jsonPath("$.name").value("Test Case 1"))
@@ -81,8 +96,16 @@ class TestControllerTest {
         `when`(testService.getTestsBySnippet(snippetId)).thenReturn(tests)
 
         mockMvc
-            .perform(get("/tests/$snippetId"))
-            .andExpect(status().isOk)
+            .perform(
+                get("/tests/$snippetId")
+                    .with(
+                        jwtPostProcessor()
+                            .jwt { jwt ->
+                                jwt.subject(userId)
+                                jwt.claim("sub", userId)
+                            },
+                    ),
+            ).andExpect(status().isOk)
             .andExpect(jsonPath("$[0].name").value("Test Case 1"))
     }
 
@@ -100,8 +123,16 @@ class TestControllerTest {
         `when`(testService.getTestById(testId)).thenReturn(response)
 
         mockMvc
-            .perform(get("/tests/$testId"))
-            .andExpect(status().isOk)
+            .perform(
+                get("/tests/$testId")
+                    .with(
+                        jwtPostProcessor()
+                            .jwt { jwt ->
+                                jwt.subject(userId)
+                                jwt.claim("sub", userId)
+                            },
+                    ),
+            ).andExpect(status().isOk)
             .andExpect(jsonPath("$.name").value("Test Case 1"))
     }
 
@@ -122,13 +153,22 @@ class TestControllerTest {
                 output = listOf("10"),
             )
 
+        `when`(authClient.checkPermission(any(), any(), any()))
+            .thenReturn(true)
+
         `when`(testService.updateTest(any(), any()))
             .thenReturn(response)
 
         mockMvc
             .perform(
-                put("/tests/$testId")
-                    .contentType(MediaType.APPLICATION_JSON)
+                put("/tests/$testId/$snippetId")
+                    .with(
+                        jwtPostProcessor()
+                            .jwt { jwt ->
+                                jwt.subject(userId)
+                                jwt.claim("sub", userId)
+                            },
+                    ).contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(request)),
             ).andExpect(status().isOk)
             .andExpect(jsonPath("$.name").value("Updated Test"))
@@ -136,8 +176,19 @@ class TestControllerTest {
 
     @Test
     fun `should delete test`() {
+        `when`(authClient.checkPermission(any(), any(), any()))
+            .thenReturn(true)
+
         mockMvc
-            .perform(delete("/tests/$testId"))
-            .andExpect(status().isNoContent)
+            .perform(
+                delete("/tests/$testId/$snippetId")
+                    .with(
+                        jwtPostProcessor()
+                            .jwt { jwt ->
+                                jwt.subject(userId)
+                                jwt.claim("sub", userId)
+                            },
+                    ),
+            ).andExpect(status().isNoContent)
     }
 }

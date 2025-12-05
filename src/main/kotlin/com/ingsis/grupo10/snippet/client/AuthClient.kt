@@ -201,13 +201,14 @@ class AuthClient(
 
     fun getSnippetOwner(snippetId: UUID): SnippetPermissionInformation? =
         try {
-            val response = webClient
-                .get()
-                .uri("/permissions/snippets/$snippetId/owner")
-                .accept(MediaType.APPLICATION_JSON)
-                .retrieve()
-                .bodyToMono<SnippetPermissionInformation>()
-                .block()
+            val response =
+                webClient
+                    .get()
+                    .uri("/permissions/snippets/$snippetId/owner")
+                    .accept(MediaType.APPLICATION_JSON)
+                    .retrieve()
+                    .bodyToMono<SnippetPermissionInformation>()
+                    .block()
 
             response
         } catch (ex: Exception) {
@@ -218,28 +219,29 @@ class AuthClient(
     fun registerOrLoginUser(
         userId: String,
         email: String?,
-        name: String?
-    ): Boolean {
-        return try {
-            val requestBody = mapOf(
-                "userId" to userId,
-                "email" to email,
-                "name" to name
-            )
+        name: String?,
+    ): Boolean =
+        try {
+            val requestBody =
+                mapOf(
+                    "userId" to userId,
+                    "email" to email,
+                    "name" to name,
+                )
 
-            val response = webClient
-                .post()
-                .uri("/users/register-or-login")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(requestBody)
-                .retrieve()
-                .bodyToMono<UserResponse>()
-                .block()
+            val response =
+                webClient
+                    .post()
+                    .uri("/users/register-or-login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .bodyValue(requestBody)
+                    .retrieve()
+                    .bodyToMono<UserResponse>()
+                    .block()
 
             response != null
         } catch (ex: Exception) {
             println("Error registering/logging in user: ${ex.message}")
             false
         }
-    }
 }
