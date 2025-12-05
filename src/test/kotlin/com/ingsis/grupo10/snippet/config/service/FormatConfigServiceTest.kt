@@ -2,17 +2,16 @@ package com.ingsis.grupo10.snippet.config.service
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.ingsis.grupo10.snippet.client.PrintScriptClient
+import com.ingsis.grupo10.snippet.dto.rules.DataItem
 import com.ingsis.grupo10.snippet.dto.rules.RuleConfigRequest
+import com.ingsis.grupo10.snippet.dto.rules.RuleDto
 import com.ingsis.grupo10.snippet.models.FormatConfig
 import com.ingsis.grupo10.snippet.repository.FormatConfigRepository
 import com.ingsis.grupo10.snippet.service.FormatConfigService
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import com.ingsis.grupo10.snippet.dto.rules.DataItem
-import com.ingsis.grupo10.snippet.dto.rules.RuleDto
 import org.mockito.ArgumentMatchers.anyString
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`

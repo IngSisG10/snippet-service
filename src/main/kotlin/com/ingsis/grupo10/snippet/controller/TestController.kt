@@ -77,7 +77,8 @@ class TestController(
         return ResponseEntity.ok(test)
     }
 
-    @DeleteMapping("/{testId}/{snippetId}"
+    @DeleteMapping(
+        "/{testId}/{snippetId}",
     )
     fun deleteTest(
         @AuthenticationPrincipal jwt: Jwt,
